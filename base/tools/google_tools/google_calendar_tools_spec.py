@@ -1,12 +1,14 @@
-from googleapiclient.errors import HttpError
-from llama_index.core.tools.tool_spec.base import BaseToolSpec
+"""Google calendar tools specs"""
 from datetime import datetime
 from typing import List, Dict
-from tools.google_tools.utils import authenticate
+from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
+from llama_index.core.tools.tool_spec.base import BaseToolSpec
+from tools.google_tools.utils import authenticate
 
 
 class CalendarToolSpec(BaseToolSpec):
+    """Google calendar tools specs"""
     spec_functions = [
         "get_google_doc_attachment_ids",
         "get_events_by_date"
@@ -16,7 +18,7 @@ class CalendarToolSpec(BaseToolSpec):
         try:
             self.service = build('calendar', 'v3', credentials=authenticate())
         except HttpError as error:
-            raise f'An error occurred while building the service: {error}'
+            raise HttpError from error
 
     def get_google_doc_attachment_ids(self, event_id: str,
                                       calendar_id: str = 'primary'
@@ -39,6 +41,7 @@ class CalendarToolSpec(BaseToolSpec):
         google_doc_mime_type = "application/vnd.google-apps.document"
         try:
             # Call the Calendar API to get the specific event
+            # pylint: disable=no-member
             event = self.service.events().get(
                 calendarId=calendar_id, eventId=event_id).execute()
 
@@ -56,10 +59,8 @@ class CalendarToolSpec(BaseToolSpec):
 
         except HttpError as error:
             # Handle common errors
-            if error.resp.status == 404:
-                return "Error: The event was not found. Please check the calendar and event IDs."
-            else:
-                return f'An error occurred: {error}'
+            return f"Error: {error}"
+
 
         return google_doc_ids
 
@@ -71,15 +72,15 @@ class CalendarToolSpec(BaseToolSpec):
             year (int): The year of the target date.
             month (int): The month of the target date (1-12).
             day (int): The day of the target date (1-31).
-            calendar_id (str, optional): The ID of the calendar to fetch events from. Defaults to 'primary'.
+            calendar_id (str, optional): The ID of the calendar to fetch
+                                        events from. Defaults to 'primary'.
 
-            list: A list of event dictionaries for the specified date, or None if an error occurs.
+            list: A list of event dictionaries for the specified date, or None
+                if an error occurs.
 
         Raises:
-            googleapiclient.errors.HttpError: If the Google Calendar API request fails.
-
-        Note:
-            Requires a valid Google Calendar API service object returned by `get_calendar_service()`.
+            googleapiclient.errors.HttpError: If the Google Calendar API
+            request fails.
         """
         target_date = datetime(year, month, day).date()
         # Format the date to RFC3339 timestamp format required by the API.
@@ -93,6 +94,7 @@ class CalendarToolSpec(BaseToolSpec):
 
         try:
             # Call the Calendar API
+            # pylint: disable=no-member
             events_result = self.service.events().list(
                 calendarId=calendar_id,
                 timeMin=time_min,

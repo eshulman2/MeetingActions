@@ -1,12 +1,17 @@
+"""
+This module is an agent with a simple api server for getting
+action items from meeting summaries
+"""
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from llama_index.core.workflow import Context
 from llm_init import InitLlm
+from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
+from llama_index.core.llms import ChatMessage
 from tools.google_tools import CalendarToolSpec, DocsToolSpec
 from tools.general_tools import DateToolsSpecs
-from agents_context import action_item_agent_context
-from llama_index.core.llms import ChatMessage
+from agents_context import ACTION_ITEM_AGENT_CONTEXT
 
 
 conf = InitLlm()
@@ -53,7 +58,7 @@ async def test_endpoint(request: ChatQuery):
     except Exception as e:
         # Handle potential errors during agent processing
         raise HTTPException(
-            status_code=500, detail=f"Error processing query: {e}")
+            status_code=500, detail=f"Error processing query: {e}") from e
 
 
 @app.post("/agent", response_model=ChatResponse)
@@ -64,7 +69,7 @@ async def chat_with_agent(request: ChatQuery):
     """
     try:
         agent_context = ChatMessage(role='system',
-                                    content=action_item_agent_context)
+                                    content=ACTION_ITEM_AGENT_CONTEXT)
         # Use the agent's asynchronous chat method
         agent_response = await action_item_agent.run(request.query,
                                                      chat_history=[
@@ -74,13 +79,14 @@ async def chat_with_agent(request: ChatQuery):
     except Exception as e:
         # Handle potential errors during agent processing
         raise HTTPException(
-            status_code=500, detail=f"Error processing query: {e}")
+            status_code=500, detail=f"Error processing query: {e}") from e
 
 
 @app.get("/")
 async def root():
     """A simple root endpoint to confirm the API is running."""
-    return {"message": "LlamaIndex ReActAgent API is running. Go to /docs to see the interactive API documentation."}
+    return {"message": "LlamaIndex ReActAgent API is running. Go to /docs "
+            "to see the interactive API documentation."}
 
 
 # 8. Add a main block to run the app with uvicorn

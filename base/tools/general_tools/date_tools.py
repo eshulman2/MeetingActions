@@ -1,8 +1,12 @@
+"""
+Date related tools
+"""
 from datetime import date, datetime
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
 
 class DateToolsSpecs(BaseToolSpec):
+    """Date tools specs for date related tools"""
     spec_functions = [
         "get_date",
         "get_time"
@@ -13,8 +17,8 @@ class DateToolsSpecs(BaseToolSpec):
 
     def get_date(self) -> str:
         """Returns a string containing todays date in the format YYYY-MM-DD"""
-        return date.today().__str__()
+        return str(date.today())
 
     def get_time(self) -> str:
         """Returns the current time"""
-        return datetime.now().time().__str__()
+        return str(datetime.now().time())

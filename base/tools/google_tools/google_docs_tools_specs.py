@@ -1,3 +1,4 @@
+"""Google Docs tools specs"""
 from tools.google_tools.utils import authenticate
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -5,6 +6,7 @@ from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
 
 class DocsToolSpec(BaseToolSpec):
+    """Google Docs tools specs"""
     spec_functions = [
         "get_google_doc_title",
         "fetch_google_doc_content"
@@ -49,17 +51,23 @@ class DocsToolSpec(BaseToolSpec):
         """Gets a google doc file title"""
         try:
             # Retrieve the document from the API
-            document = self.service.documents().get(documentId=document_id).execute()
+            # pylint: disable=no-member
+            document = self.service.documents().get(
+                documentId=document_id).execute()
 
-            return document.get('title')
+            title = document.get('title')
+            return title
 
         except HttpError as err:
             if err.resp.status == 404:
                 return "The requested document was not found. Please check the DOCUMENT_ID."
         except FileNotFoundError:
             return "Error: `credentials.json` not found."
+        # pylint: disable=broad-exception-caught
         except Exception as e:
             return f"An unexpected error occurred: {e}"
+
+        return None
 
     def fetch_google_doc_content(self, document_id: str) -> str:
         """
@@ -73,7 +81,9 @@ class DocsToolSpec(BaseToolSpec):
         """
         try:
             # Retrieve the document from the API
-            document = self.service.documents().get(documentId=document_id).execute()
+            # pylint: disable=no-member
+            document = self.service.documents().get(
+                documentId=document_id).execute()
 
             print(f"The title of the document is: {document.get('title')}")
 
@@ -95,6 +105,7 @@ class DocsToolSpec(BaseToolSpec):
             print("Error: `credentials.json` not found.")
             print("Please follow the setup instructions in the script's comments.")
             return None
+        # pylint: disable=broad-exception-caught
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             return None
