@@ -1,0 +1,53 @@
+import json
+import os
+from pydantic import BaseModel, ValidationError
+from typing import Dict
+from llama_index.llms.openai import OpenAI
+from llama_index.llms.google_genai import GoogleGenAI
+
+SUPPORTED_LLMS = {
+    "OpenAI": OpenAI,
+    "Gemini": GoogleGenAI
+}
+
+
+class ConfigSchema(BaseModel):
+    llm: str
+    model: str
+    api_key: str | None = None
+    additional_model_parameter: Dict | None = {}
+
+
+class LlmNotSupported(Exception):
+    def __init__(self):
+        super().__init__(
+            'The llm you are trying to use is not supported please choose one '
+            f'of: {SUPPORTED_LLMS.keys().__str__()}')
+
+
+class InitLlm:
+    def __init__(self, path=os.environ.get("CONFIG_PATH", 'config.json')):
+        with open(path, 'r') as config:
+            try:
+                config = json.load(config)
+            except json.JSONDecodeError as ex:
+                raise json.JSONDecodeError(
+                    f'Config json failed loading with the following exception: {ex}')
+
+            try:
+                self.config = ConfigSchema(**config)
+            except ValidationError as err:
+                raise err
+
+            if self.config.llm not in SUPPORTED_LLMS.keys():
+                raise LlmNotSupported
+
+            api_key = os.environ.get('MODEL_API_KEY', self.config.api_key)
+            if not api_key:
+                raise ValueError('Api key is not set please set it in config '
+                                 'file or using MODEL_API_KEY environment '
+                                 'variable')
+
+            llm_object = SUPPORTED_LLMS.get(self.config.llm)
+            self.llm = llm_object(model=self.config.model, api_key=api_key,
+                                  **self.config.additional_model_parameter)
