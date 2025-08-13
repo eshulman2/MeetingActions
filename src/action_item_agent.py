@@ -10,7 +10,7 @@ from configs.read_config import ConfigReader
 from configs.agents_contexts import ACTION_ITEM_AGENT_CONTEXT
 from tools.google_tools import CalendarToolSpec, DocsToolSpec
 from tools.general_tools import DateToolsSpecs
-from agent_server import BaseAgentServer
+from base_agent_server import BaseAgentServer
 
 
 config = ConfigReader()

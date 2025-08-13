@@ -9,7 +9,7 @@ from configs.agents_contexts import JIRA_AGENT_CONTEXT
 from configs.read_config import ConfigReader
 from tools.general_tools import DateToolsSpecs
 from tools.jira_tools import JiraToolSpec
-from agent_server import BaseAgentServer
+from base_agent_server import BaseAgentServer
 
 
 config = ConfigReader()
