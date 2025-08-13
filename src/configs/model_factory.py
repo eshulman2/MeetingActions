@@ -32,7 +32,7 @@ class LlmNotSupported(Exception):
             f'of: {SUPPORTED_LLMS.keys().__str__()}')
 
 
-class InitLlm:
+class ModelFactory:
     """Class for loading user config and generate llm object"""
     def __init__(self, path=os.environ.get("CONFIG_PATH", 'config.json')):
         with open(path, 'r') as config:

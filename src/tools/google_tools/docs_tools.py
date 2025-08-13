@@ -1,8 +1,8 @@
 """Google Docs tools specs"""
-from tools.google_tools.utils import authenticate
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
+from tools.google_tools.utils import authenticate
 
 
 class DocsToolSpec(BaseToolSpec):

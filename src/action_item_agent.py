@@ -3,16 +3,16 @@ This module is an agent with a simple API server for getting
 action items from meeting summaries.
 """
 
-from llm_init import InitLlm
 from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
+from configs.model_factory import ModelFactory
+from configs.agents_contexts import ACTION_ITEM_AGENT_CONTEXT
 from tools.google_tools import CalendarToolSpec, DocsToolSpec
 from tools.general_tools import DateToolsSpecs
-from agents_context import ACTION_ITEM_AGENT_CONTEXT
 from agent_server import BaseAgentServer
 
 
-conf = InitLlm()
+conf = ModelFactory()
 
 tools = CalendarToolSpec().to_tool_list() + DocsToolSpec().to_tool_list() + \
     DateToolsSpecs().to_tool_list()

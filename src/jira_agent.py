@@ -2,16 +2,16 @@
 This module is a Jira agent with a simple API server for Jira operations.
 """
 import os
-from llm_init import InitLlm
 from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
+from configs.model_factory import ModelFactory
+from configs.agents_contexts import JIRA_AGENT_CONTEXT
 from tools.general_tools import DateToolsSpecs
 from tools.jira_tools import JiraToolSpec
-from agents_context import JIRA_AGENT_CONTEXT
 from agent_server import BaseAgentServer
 
 
-conf = InitLlm()
+conf = ModelFactory()
 
 tools = DateToolsSpecs().to_tool_list() + JiraToolSpec(
     api_token=os.environ.get('JIRA_API_TOKEN'),

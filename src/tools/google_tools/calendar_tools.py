@@ -61,7 +61,6 @@ class CalendarToolSpec(BaseToolSpec):
             # Handle common errors
             return f"Error: {error}"
 
-
         return google_doc_ids
 
     def get_events_by_date(self, year: int, month: int, day: int,
