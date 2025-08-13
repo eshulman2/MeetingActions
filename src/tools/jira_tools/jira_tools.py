@@ -1,5 +1,5 @@
 """Jira tools specs"""
-from typing import List, Dict
+from typing import List, Dict, Any
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 from jira import JIRA, JIRAError
 from jira.resources import Issue
@@ -12,17 +12,51 @@ class JiraToolSpec(BaseToolSpec):
         "list_projects",
         "add_comment",
         "search_jira_issues",
-        "create_jira_issue"
+        "create_jira_issue",
+        "get_field_name_to_id",
+        "get_all_fields"
     ]
 
-    def __init__(self, api_token, server):
+    def __init__(self, api_token: str, server: str):
         self.jira_client = JIRA(server=server,
                                 token_auth=api_token)
+        self.fields = self.jira_client.fields()
 
-    def get_jira_issue(self, issue_key: str) -> Issue:
-        """Get jira issue by issue key"""
+    def get_field_name_to_id(self) -> Dict:
+        """Get mapping of field name to jira field id"""
+        return {f['name']: f['id'] for f in self.fields}
+
+    def get_all_fields(self) -> List[str]:
+        """Get list of all available jira fields"""
+        return [f['name'] for f in self.fields]
+
+    def get_jira_issue(
+        self,
+        issue_key: str,
+        field_filter: List[str] | None = None
+    ) -> dict[str:Any]:
+        """
+        Get jira issue by issue key and fields to filter.
+        Default filter fields are:
+        'assignee', 'status', 'description', 'summary'
+        """
+        if field_filter is None:
+            field_filter = ['assignee',
+                            'status', 'description', 'summary']
         try:
-            return self.jira_client.issue(issue_key)
+            issue = self.jira_client.issue(issue_key)
+            issue_dict = {}
+
+            fields_mapping = self.get_field_name_to_id()
+
+            for f in field_filter:
+                field = issue.get_field(fields_mapping[f])
+                if not isinstance(field, str):
+                    field = getattr(field, 'name', field)
+                issue_dict[f] = field
+
+            return issue_dict
+
         except JIRAError as e:
             raise JIRAError from e
 
@@ -54,7 +88,11 @@ class JiraToolSpec(BaseToolSpec):
         """Creates a single Jira issue using a dictionary of Jira
         fields and values"""
         try:
-            new_issue = self.jira_client.create_issue(fields=issue_dict)
+            fields_mapping = self.get_field_name_to_id()
+            new_issue_dict = {
+                fields_mapping[key]: value for key, value in issue_dict.items()
+            }
+            new_issue = self.jira_client.create_issue(fields=new_issue_dict)
             return new_issue
         except JIRAError as e:
             raise JIRAError from e
