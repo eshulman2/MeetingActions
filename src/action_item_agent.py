@@ -6,21 +6,23 @@ action items from meeting summaries.
 from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
 from configs.model_factory import ModelFactory
+from configs.read_config import ConfigReader
 from configs.agents_contexts import ACTION_ITEM_AGENT_CONTEXT
 from tools.google_tools import CalendarToolSpec, DocsToolSpec
 from tools.general_tools import DateToolsSpecs
 from agent_server import BaseAgentServer
 
 
-conf = ModelFactory()
+config = ConfigReader()
+llm = ModelFactory(config.config)
 
 tools = CalendarToolSpec().to_tool_list() + DocsToolSpec().to_tool_list() + \
     DateToolsSpecs().to_tool_list()
 
 action_item_agent = ReActAgent(
     tools=tools,
-    llm=conf.llm,
-    **conf.config.agent_config
+    llm=llm.llm,
+    **config.config.agent_config
 )
 
 ctx = Context(action_item_agent)

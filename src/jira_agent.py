@@ -6,21 +6,23 @@ from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
 from configs.model_factory import ModelFactory
 from configs.agents_contexts import JIRA_AGENT_CONTEXT
+from configs.read_config import ConfigReader
 from tools.general_tools import DateToolsSpecs
 from tools.jira_tools import JiraToolSpec
 from agent_server import BaseAgentServer
 
 
-conf = ModelFactory()
+config = ConfigReader()
+llm = ModelFactory(config.config)
 
 tools = DateToolsSpecs().to_tool_list() + JiraToolSpec(
     api_token=os.environ.get('JIRA_API_TOKEN'),
-    **conf.config.tools_config["jira_tool"]).to_tool_list()
+    **config.config.tools_config["jira_tool"]).to_tool_list()
 
 jira_agent = ReActAgent(
     tools=tools,
-    llm=conf.llm,
-    **conf.config.agent_config
+    llm=llm.llm,
+    **config.config.agent_config
 )
 
 ctx = Context(jira_agent)
