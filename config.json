@@ -1,4 +1,8 @@
 {
     "llm": "Gemini",
-    "model": "gemini-2.0-flash"
+    "model": "gemini-2.0-flash",
+    "tools_config": {
+        "jira_tool": {"api_token": "*********************************", "server": " https://issues.redhat.com"}
+    },
+    "agent_config": {"max_iterations": 20, "verbose": true}
 }

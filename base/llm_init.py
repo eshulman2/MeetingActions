@@ -20,6 +20,8 @@ class ConfigSchema(BaseModel):
     model: str
     api_key: str | None = None
     additional_model_parameter: Dict | None = {}
+    tools_config: Dict | None = {}
+    agent_config: Dict | None = {}
 
 
 class LlmNotSupported(Exception):

@@ -9,23 +9,23 @@ from llm_init import InitLlm
 from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.llms import ChatMessage
-from tools.google_tools import CalendarToolSpec, DocsToolSpec
 from tools.general_tools import DateToolsSpecs
-from agents_context import ACTION_ITEM_AGENT_CONTEXT
+from tools.jira_tools import JiraToolSpec
+from agents_context import JIRA_AGENT_CONTEXT
 
 
 conf = InitLlm()
 
-tools = CalendarToolSpec().to_tool_list() + DocsToolSpec().to_tool_list() + \
-    DateToolsSpecs().to_tool_list()
+tools = DateToolsSpecs().to_tool_list() + JiraToolSpec(
+    **conf.config.tools_config["jira_tool"]).to_tool_list()
 
-action_item_agent = ReActAgent(
+jira_agent = ReActAgent(
     tools=tools,
     llm=conf.llm,
     **conf.config.agent_config
 )
 
-ctx = Context(action_item_agent)
+ctx = Context(jira_agent)
 
 
 class ChatQuery(BaseModel):
@@ -53,7 +53,7 @@ async def test_endpoint(request: ChatQuery):
     """
     try:
         # Use the agent's asynchronous chat method
-        agent_response = await action_item_agent.run(request.query)
+        agent_response = await jira_agent.run(request.query)
         # The actual text response is in the 'response' attribute
         return ChatResponse(response=str(agent_response))
     except Exception as e:
@@ -70,11 +70,11 @@ async def chat_with_agent(request: ChatQuery):
     """
     try:
         agent_context = ChatMessage(role='system',
-                                    content=ACTION_ITEM_AGENT_CONTEXT)
+                                    content=JIRA_AGENT_CONTEXT)
         # Use the agent's asynchronous chat method
-        agent_response = await action_item_agent.run(request.query,
-                                                     chat_history=[
-                                                         agent_context])
+        agent_response = await jira_agent.run(request.query,
+                                              chat_history=[
+                                                  agent_context])
         # The actual text response is in the 'response' attribute
         return ChatResponse(response=str(agent_response))
     except Exception as e:
