@@ -38,7 +38,8 @@ class ActionItemAgentServer(BaseAgentServer):
 server = ActionItemAgentServer(
     agent=action_item_agent,
     title="Action Item Agent",
-    description="An API to expose a LlamaIndex ReActAgent for action item extraction."
+    description="An API to expose a LlamaIndex \
+        ReActAgent for action item extraction."
 )
 app = server.app
 
