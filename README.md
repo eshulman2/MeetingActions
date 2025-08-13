@@ -36,18 +36,29 @@ This repository serves as a hands-on learning environment for:
 ## 📁 Project Structure
 
 ```
-Agents/
-├── base/
+Gmeet_agent/
+├── src/
 │   ├── action_item_agent.py      # Action item extraction agent
-│   ├── agent_server.py           # Base FastAPI server class
-│   ├── agents_context.py         # Agent context definitions
+│   ├── agent_server.py           # FastAPI server implementation
 │   ├── jira_agent.py            # Jira management agent
-│   ├── llm_init.py              # LLM initialization
+│   ├── configs/
+│   │   ├── agents_contexts.py    # Agent context definitions
+│   │   └── model_factory.py      # LLM model factory
 │   └── tools/
 │       ├── general_tools/        # Date and utility tools
+│       │   ├── __init__.py
+│       │   └── date_tools.py
 │       ├── google_tools/         # Google Calendar & Docs tools
+│       │   ├── __init__.py
+│       │   ├── calendar_tools.py
+│       │   ├── docs_tools.py
+│       │   └── utils.py
 │       └── jira_tools/           # Jira API tools
+│           ├── __init__.py
+│           └── jira_tools.py
 ├── config.json                  # Configuration file
+├── credentials.json             # Google API credentials
+├── token.json                   # Google API token
 ├── requirements.txt             # Python dependencies
 ├── Dockerfile                   # Container configuration
 └── README.md                    # This file
