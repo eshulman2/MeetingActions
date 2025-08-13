@@ -1,2 +1,2 @@
 [MESSAGES CONTROL]
-disable=W1514,R0903
+disable=W1514,R0903,R0801 # Ignore duplicated lines for now, remove R0801 after proper api setup
