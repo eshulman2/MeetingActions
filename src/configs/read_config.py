@@ -1,7 +1,8 @@
+"""module for reading configuration"""
 from typing import Dict
-from pydantic import BaseModel, ValidationError
 import json
 import os
+from pydantic import BaseModel, ValidationError
 
 
 class ConfigSchema(BaseModel):
