@@ -104,7 +104,7 @@ Gmeet_agent/
 
 1. **Build the container**
    ```bash
-   docker build -t agents .
+   docker build --build-arg AGENT_SERVER='action_item_agent' -t agents .
    ```
 
 2. **Run the container**
@@ -122,13 +122,13 @@ Gmeet_agent/
 
 **Action Item Agent:**
 ```bash
-cd base
+cd src
 uvicorn action_item_agent:app --reload --port 8001
 ```
 
 **Jira Agent:**
 ```bash
-cd base
+cd src
 uvicorn jira_agent:app --reload --port 8002
 ```
 
@@ -202,7 +202,7 @@ Each agent has specific context defined in `agents_context.py`:
 
 ### Adding New Agents
 
-1. Create a new agent file in `base/`
+1. Create a new agent file in `src/`
 2. Extend `BaseAgentServer`
 3. Define agent context in `agents_context.py`
 4. Initialize with required tools and LLM

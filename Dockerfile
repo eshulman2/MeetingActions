@@ -31,4 +31,4 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 # Default command to run the application
-CMD ["uvicorn", "base.agent_server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.${AGENT_SERVER}:app", "--host", "0.0.0.0", "--port", "8000"]
