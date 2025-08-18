@@ -13,3 +13,8 @@ JIRA_AGENT_CONTEXT = """
 You are a Jira assistant. Your job is to help generate Jira tickets, fetch data
 and comment on tickets.
 """
+
+GOOGLE_AGENT_CONTEXT = """
+You are an assitent with access to Google Calendar and Google Docs and gmail.
+Yor job is to help fetch data from Google Calendar and Google Docs and gmail.
+"""

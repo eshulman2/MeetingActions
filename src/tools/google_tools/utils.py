@@ -9,7 +9,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/documents.readonly",
-          "https://www.googleapis.com/auth/calendar.readonly"]
+          "https://www.googleapis.com/auth/calendar"]
 
 
 # Authentication function

@@ -1,6 +1,7 @@
 """Google calendar tools specs"""
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
+import tzlocal
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
@@ -10,8 +11,9 @@ from tools.google_tools.utils import authenticate
 class CalendarToolSpec(BaseToolSpec):
     """Google calendar tools specs"""
     spec_functions = [
-        "get_google_doc_attachment_ids",
-        "get_events_by_date"
+        "get_event_gdoc_attachments_ids",
+        "get_events_by_date",
+        "create_event"
     ]
 
     def __init__(self):
@@ -20,9 +22,9 @@ class CalendarToolSpec(BaseToolSpec):
         except HttpError as error:
             raise HttpError from error
 
-    def get_google_doc_attachment_ids(self, event_id: str,
-                                      calendar_id: str = 'primary'
-                                      ) -> List[str] | str:
+    def get_event_gdoc_attachments_ids(self, event_id: str,
+                                       calendar_id: str = 'primary'
+                                       ) -> List[str] | str:
         """
         Retrieves an event from Google Calendar and extracts the file IDs of
         all attached Google Docs.
@@ -57,11 +59,10 @@ class CalendarToolSpec(BaseToolSpec):
             else:
                 return "Event has no attachments."
 
-        except HttpError as error:
-            # Handle common errors
-            return f"Error: {error}"
+            return google_doc_ids
 
-        return google_doc_ids
+        except HttpError as error:
+            raise HttpError from error
 
     def get_events_by_date(self, year: int, month: int, day: int,
                            calendar_id: str = 'primary') -> List[Dict]:
@@ -105,5 +106,53 @@ class CalendarToolSpec(BaseToolSpec):
             return events
 
         except HttpError as error:
-            print(f'An error occurred: {error}')
-            return None
+            raise HttpError from error
+
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def create_event(self,
+                     start_time: str,
+                     end_time: str,
+                     summary: Optional[str] = None,
+                     location: Optional[str] = None,
+                     description: Optional[str] = None,
+                     attendees: Optional[List[str]] = None) -> Dict:
+        """
+        Creates a new event in the user's primary Google Calendar.
+
+        Args:
+            summary (str): The title of the event.
+            location (str): The location of the event.
+            description (str): A description of the event.
+            start_time (str): The start time of the event in RFC3339 format
+                (e.g., "2025-08-28T09:00:00-07:00").
+            end_time (str): The end time of the event in RFC3339 format
+                (e.g., "2025-08-28T09:00:00-07:00").
+
+        Returns:
+            dict: The created event object.
+        """
+        try:
+            attendees = ([{'email': email}
+                         for email in attendees] if attendees else [])
+            event = {
+                "summary": summary,
+                "location": location,
+                "description": description,
+                "start": {
+                    "dateTime": start_time,
+                    "timeZone": tzlocal.get_localzone_name()
+                },
+                "end": {
+                    "dateTime": end_time,
+                    "timeZone": tzlocal.get_localzone_name()
+                },
+                "attendees": attendees
+            }
+
+            # pylint: disable=no-member
+            created_event = self.service.events().insert(
+                calendarId="primary", body=event).execute()
+
+            return created_event
+        except HttpError as error:
+            raise HttpError from error
