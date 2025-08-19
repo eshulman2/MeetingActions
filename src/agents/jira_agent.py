@@ -4,12 +4,10 @@ This module is a Jira agent with a simple API server for Jira operations.
 import os
 from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
-from configs.model_factory import ModelFactory
-from configs.agents_contexts import JIRA_AGENT_CONTEXT
-from configs.read_config import ConfigReader
-from tools.general_tools import DateToolsSpecs
-from tools.jira_tools import JiraToolSpec
-from base_agent_server import BaseAgentServer
+from src.configs import ConfigReader, ModelFactory, JIRA_AGENT_CONTEXT
+from src.tools.general_tools import DateToolsSpecs
+from src.tools.jira_tools import JiraToolSpec
+from src.agents.base_agent_server import BaseAgentServer
 
 
 config = ConfigReader()

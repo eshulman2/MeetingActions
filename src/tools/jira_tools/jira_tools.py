@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 from jira import JIRA, JIRAError
 from jira.resources import Issue
-from tools.jira_tools.jira_formatter import JiraFormatter
+from .jira_formatter import JiraFormatter
 
 
 class JiraToolSpec(BaseToolSpec):

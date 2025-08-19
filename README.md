@@ -17,7 +17,7 @@ This repository serves as a hands-on learning environment for:
 
 ### Implemented Agents
 
-1. **Action Item Agent** (`action_item_agent.py`)
+1. **Action Item Agent** (`google_agent.py`)
    - Extracts action items from meeting summaries
    - Integrates with Google Calendar and Google Docs
    - Processes meeting notes and attached documents
@@ -32,37 +32,6 @@ This repository serves as a hands-on learning environment for:
 - **Google Tools**: Calendar operations, document processing
 - **Jira Tools**: Ticket management, issue tracking
 - **General Tools**: Date utilities and helper functions
-
-## 📁 Project Structure
-
-```
-Gmeet_agent/
-├── src/
-│   ├── action_item_agent.py      # Action item extraction agent
-│   ├── agent_server.py           # FastAPI server implementation
-│   ├── jira_agent.py            # Jira management agent
-│   ├── configs/
-│   │   ├── agents_contexts.py    # Agent context definitions
-│   │   └── model_factory.py      # LLM model factory
-│   └── tools/
-│       ├── general_tools/        # Date and utility tools
-│       │   ├── __init__.py
-│       │   └── date_tools.py
-│       ├── google_tools/         # Google Calendar & Docs tools
-│       │   ├── __init__.py
-│       │   ├── calendar_tools.py
-│       │   ├── docs_tools.py
-│       │   └── utils.py
-│       └── jira_tools/           # Jira API tools
-│           ├── __init__.py
-│           └── jira_tools.py
-├── config.json                  # Configuration file
-├── credentials.json             # Google API credentials
-├── token.json                   # Google API token
-├── requirements.txt             # Python dependencies
-├── Dockerfile                   # Container configuration
-└── README.md                    # This file
-```
 
 ## 🛠️ Setup Instructions
 
@@ -123,13 +92,13 @@ Gmeet_agent/
 **Action Item Agent:**
 ```bash
 cd src
-uvicorn action_item_agent:app --reload --port 8001
+uvicorn src.agents.google_agent:app --reload --port 8001
 ```
 
 **Jira Agent:**
 ```bash
 cd src
-uvicorn jira_agent:app --reload --port 8002
+uvicorn src.agents.jira_agent:app --reload --port 8002
 ```
 
 ### API Endpoints

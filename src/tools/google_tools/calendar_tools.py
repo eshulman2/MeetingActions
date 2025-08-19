@@ -5,7 +5,7 @@ import tzlocal
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
-from tools.google_tools.utils import authenticate
+from .utils import authenticate
 
 
 class CalendarToolSpec(BaseToolSpec):

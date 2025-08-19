@@ -6,12 +6,10 @@ action items from meeting summaries.
 from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.tools.google import GmailToolSpec
-from configs.model_factory import ModelFactory
-from configs.read_config import ConfigReader
-from configs.agents_contexts import GOOGLE_AGENT_CONTEXT
-from tools.google_tools import CalendarToolSpec, DocsToolSpec
-from tools.general_tools import DateToolsSpecs
-from base_agent_server import BaseAgentServer
+from src.configs import ModelFactory, ConfigReader, GOOGLE_AGENT_CONTEXT
+from src.tools.google_tools import CalendarToolSpec, DocsToolSpec
+from src.tools.general_tools import DateToolsSpecs
+from src.agents.base_agent_server import BaseAgentServer
 
 
 config = ConfigReader()
