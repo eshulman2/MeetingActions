@@ -2,8 +2,9 @@ fastapi==0.116.1
 google_api_python_client==2.178.0
 google_auth_oauthlib==1.2.2
 jira==3.10.5
-llama_index==0.13.1
+llama_index==0.13.2
 protobuf==3.19.6
 pydantic==2.11.7
 llama-index-llms-openai==0.5.2
 llama-index-llms-google-genai==0.3.0
+tzlocal==5.3.1
