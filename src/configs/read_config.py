@@ -1,5 +1,5 @@
 """module for reading configuration"""
-from typing import Dict
+from typing import Dict, Any
 import json
 import os
 from pydantic import BaseModel, ValidationError
@@ -10,9 +10,10 @@ class ConfigSchema(BaseModel):
     llm: str
     model: str
     api_key: str | None = None
-    additional_model_parameter: Dict | None = {}
-    tools_config: Dict | None = {}
-    agent_config: Dict | None = {}
+    additional_model_parameter: Dict[str, Any] | None = {}
+    tools_config: Dict[str, Any] | None = {}
+    agent_config: Dict[str, Any] | None = {}
+    mcp_config: Dict[str, Any] | None = {}
 
 
 class ConfigReader:
