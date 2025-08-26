@@ -5,11 +5,11 @@ action items from meeting summaries.
 
 from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
-from llama_index.tools.mcp import get_tools_from_mcp_url
 from src.configs import ModelFactory, ConfigReader, GOOGLE_AGENT_CONTEXT
 from src.tools.google_tools import CalendarToolSpec, DocsToolSpec
 from src.tools.general_tools import DateToolsSpecs
 from src.llamaindex_agents.base_agent_server import BaseAgentServer
+from src.llamaindex_agents.utils import safe_load_mcp_tools
 
 config = ConfigReader()
 llm = ModelFactory(config.config)
@@ -17,8 +17,7 @@ llm = ModelFactory(config.config)
 tools = CalendarToolSpec().to_tool_list() \
     + DocsToolSpec().to_tool_list() \
     + DateToolsSpecs().to_tool_list() \
-    + [get_tools_from_mcp_url(mcp_server)
-       for mcp_server in config.config.mcp_config.get('servers', [])]
+    + safe_load_mcp_tools(config.config.mcp_config.get('servers', []))
 
 google_agent = ReActAgent(
     tools=tools,

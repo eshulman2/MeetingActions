@@ -9,5 +9,9 @@
     "agent_config": {
         "max_iterations": 20,
         "verbose": true
+    },
+    "mcp_config": {
+        "port": 8002,
+        "servers": ["http://127.0.0.1:8002/mcp"]
     }
 }
