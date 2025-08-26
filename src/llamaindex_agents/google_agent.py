@@ -3,6 +3,7 @@ This module is an agent with a simple API server for getting
 action items from meeting summaries.
 """
 
+import nest_asyncio
 from llama_index.core.workflow import Context
 from llama_index.core.agent.workflow import ReActAgent
 from src.configs import ModelFactory, ConfigReader, GOOGLE_AGENT_CONTEXT
@@ -10,6 +11,8 @@ from src.tools.google_tools import CalendarToolSpec, DocsToolSpec
 from src.tools.general_tools import DateToolsSpecs
 from src.llamaindex_agents.base_agent_server import BaseAgentServer
 from src.llamaindex_agents.utils import safe_load_mcp_tools
+
+nest_asyncio.apply()
 
 config = ConfigReader()
 llm = ModelFactory(config.config)

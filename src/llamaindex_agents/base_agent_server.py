@@ -21,7 +21,8 @@ class ChatResponse(BaseModel):
 class BaseAgentServer(ABC):
     """Base class for agent servers with common FastAPI functionality."""
 
-    def __init__(self, agent: ReActAgent, title: str, description: str, additional_routes=None):
+    def __init__(self, agent: ReActAgent, title: str, description: str,
+                 additional_routes=None):
         self.agent = agent
         self.app = FastAPI(
             title=title,
