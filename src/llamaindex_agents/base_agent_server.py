@@ -21,7 +21,7 @@ class ChatResponse(BaseModel):
 class BaseAgentServer(ABC):
     """Base class for agent servers with common FastAPI functionality."""
 
-    def __init__(self, agent: ReActAgent, title: str, description: str):
+    def __init__(self, agent: ReActAgent, title: str, description: str, additional_routes=None):
         self.agent = agent
         self.app = FastAPI(
             title=title,
@@ -29,6 +29,8 @@ class BaseAgentServer(ABC):
             version="1.0.0",
         )
         self._setup_routes()
+        if additional_routes:
+            self._register_additional_routes(additional_routes)
 
     def _setup_routes(self):
         """Setup common routes for all agent servers."""
@@ -71,6 +73,11 @@ class BaseAgentServer(ABC):
                 "message": f"{self.app.title}, "
                 "API is running. Go to /docs for interactive documentation."
             }
+
+    def _register_additional_routes(self, routes):
+        """Register additional routes from a list of route definitions."""
+        for route in routes:
+            self.app.add_api_route(**route)
 
     @abstractmethod
     def get_agent_context(self) -> str:
