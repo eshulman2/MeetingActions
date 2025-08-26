@@ -28,7 +28,7 @@ google_agent = ReActAgent(
 ctx = Context(google_agent)
 
 
-class ActionItemAgentServer(BaseAgentServer):
+class GoogleAgentServer(BaseAgentServer):
     """Action item agent server implementation."""
 
     def get_agent_context(self) -> str:
@@ -37,7 +37,7 @@ class ActionItemAgentServer(BaseAgentServer):
 
 
 # Initialize the server
-server = ActionItemAgentServer(
+server = GoogleAgentServer(
     agent=google_agent,
     title="Google Agent",
     description="An API to expose a LlamaIndex \
