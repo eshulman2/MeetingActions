@@ -35,6 +35,7 @@ call was done.
 
 GOOGLE_MEETING_NOTES = """
 Fetch me the meeting notes from {meeting} that occurred on the {date}.
+The calendar meeting name should be match the meeting name in the request exactly.
 In your reply only return the content of the meeting notes in case there are meeting notes.
-in case there is no such meeting or no meeting notes attached reply to the used with "oh no"
+in case there is no such meeting or no meeting notes attached reply with an error message explaining the issue.
 """

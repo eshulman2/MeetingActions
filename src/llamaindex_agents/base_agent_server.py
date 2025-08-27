@@ -22,8 +22,7 @@ class ChatResponse(BaseModel):
 class BaseAgentServer(ABC):
     """Base class for agent servers with common FastAPI functionality."""
 
-    def __init__(self, llm, title: str, description: str,
-                 additional_routes=None):
+    def __init__(self, llm, title: str, description: str):
         self.agent = self.create_agent(llm)
         self.ctx = Context(self.agent)
         self.app = FastAPI(
@@ -47,7 +46,7 @@ class BaseAgentServer(ABC):
             except Exception as e:
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Error processing query: {e}"
+                    detail=f"Error processing request: {e}"
                 ) from e
 
         @self.app.post("/agent", response_model=ChatResponse)
@@ -64,6 +63,7 @@ class BaseAgentServer(ABC):
                     ctx=self.ctx
                 )
                 return ChatResponse(response=str(agent_response))
+            # pylint: disable=duplicate-code
             except Exception as e:
                 raise HTTPException(
                     status_code=500,

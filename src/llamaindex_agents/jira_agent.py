@@ -36,6 +36,9 @@ class JiraAgentServer(BaseAgentServer):
         """Return the Jira agent context."""
         return JIRA_AGENT_CONTEXT
 
+    def additional_routes(self):
+        pass
+
 
 # Initialize the server
 server = JiraAgentServer(

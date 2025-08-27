@@ -4,6 +4,7 @@ action items from meeting summaries.
 """
 
 import nest_asyncio
+from pydantic import BaseModel, Field
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.llms import ChatMessage
 from fastapi import HTTPException
@@ -11,13 +12,21 @@ from src.configs import (ModelFactory, ConfigReader,
                          GOOGLE_AGENT_CONTEXT, GOOGLE_MEETING_NOTES)
 from src.tools.google_tools import CalendarToolSpec, DocsToolSpec
 from src.tools.general_tools import DateToolsSpecs
-from src.llamaindex_agents.base_agent_server import (BaseAgentServer,
-                                                     ChatResponse)
+from src.llamaindex_agents.base_agent_server import BaseAgentServer
 from src.llamaindex_agents.utils import safe_load_mcp_tools
 
 nest_asyncio.apply()
 
 config = ConfigReader()
+
+
+class MeetingNoteFormat(BaseModel):
+    """test format for meeting note endpoint reply"""
+    link: str = Field(description='link to meeting notes file')
+    content: str = Field(
+        description='the agent message', default=None)
+    error: bool = Field(
+        description='field indicating on rather or not an error occurred')
 
 
 class GoogleAgentServer(BaseAgentServer):
@@ -33,6 +42,7 @@ class GoogleAgentServer(BaseAgentServer):
         google_agent = ReActAgent(
             tools=tools,
             llm=llm.llm,
+            output_cls=MeetingNoteFormat,
             **config.config.agent_config
         )
 
@@ -60,7 +70,9 @@ class GoogleAgentServer(BaseAgentServer):
                                                           agent_context],
                                                       ctx=self.ctx
                                                       )
-                return ChatResponse(response=str(agent_response))
+
+                return agent_response.structured_response
+            # pylint: disable=duplicate-code
             except Exception as e:
                 raise HTTPException(
                     status_code=500,
