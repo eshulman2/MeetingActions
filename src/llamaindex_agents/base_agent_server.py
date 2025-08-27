@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.llms import ChatMessage
+from llama_index.core.workflow import Context
 
 
 class ChatQuery(BaseModel):
@@ -21,17 +22,17 @@ class ChatResponse(BaseModel):
 class BaseAgentServer(ABC):
     """Base class for agent servers with common FastAPI functionality."""
 
-    def __init__(self, agent: ReActAgent, title: str, description: str,
+    def __init__(self, llm, title: str, description: str,
                  additional_routes=None):
-        self.agent = agent
+        self.agent = self.create_agent(llm)
+        self.ctx = Context(self.agent)
         self.app = FastAPI(
             title=title,
             description=description,
             version="1.0.0",
         )
         self._setup_routes()
-        if additional_routes:
-            self._register_additional_routes(additional_routes)
+        self.additional_routes()
 
     def _setup_routes(self):
         """Setup common routes for all agent servers."""
@@ -40,7 +41,8 @@ class BaseAgentServer(ABC):
         async def test_endpoint(request: ChatQuery):
             """Test endpoint with no additional context."""
             try:
-                agent_response = await self.agent.run(request.query)
+                agent_response = await self.agent.run(request.query,
+                                                      ctx=self.ctx)
                 return ChatResponse(response=str(agent_response))
             except Exception as e:
                 raise HTTPException(
@@ -58,7 +60,8 @@ class BaseAgentServer(ABC):
                 )
                 agent_response = await self.agent.run(
                     request.query,
-                    chat_history=[agent_context]
+                    chat_history=[agent_context],
+                    ctx=self.ctx
                 )
                 return ChatResponse(response=str(agent_response))
             except Exception as e:
@@ -75,11 +78,14 @@ class BaseAgentServer(ABC):
                 "API is running. Go to /docs for interactive documentation."
             }
 
-    def _register_additional_routes(self, routes):
-        """Register additional routes from a list of route definitions."""
-        for route in routes:
-            self.app.add_api_route(**route)
-
     @abstractmethod
     def get_agent_context(self) -> str:
         """Return the agent-specific context string."""
+
+    @abstractmethod
+    def create_agent(self, llm) -> ReActAgent:
+        """Returns a generic react agent"""
+
+    @abstractmethod
+    def additional_routes(self):
+        """Additional routes"""
