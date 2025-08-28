@@ -33,7 +33,7 @@ This repository serves as a hands-on learning environment for:
 
 ### Workflow System
 
-3. **WorkItems Workflow** (`src/llamaindex/workflows/workitems_workflow.py`)
+3. **ActionItems Workflow** (`src/llamaindex/workflows/action_items_workflow.py`)
    - Multi-step workflow for processing meeting notes
    - Automated action item generation with review cycles
    - JSON validation and error handling
@@ -121,9 +121,9 @@ uvicorn src.llamaindex.agents.jira_agent:app --reload --port 8002
 
 ### Running Workflows
 
-**WorkItems Workflow:**
+**ActionItems Workflow:**
 ```python
-from src.llamaindex.workflows.workitems_workflow import WorkItemWorkflow
+from src.llamaindex.workflows.action_items_workflow import WorkItemWorkflow
 
 # Initialize workflow with max iterations
 workflow = WorkItemWorkflow(max_iterations=3)

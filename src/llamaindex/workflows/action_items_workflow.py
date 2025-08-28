@@ -5,8 +5,10 @@ but I'm here to practice so, so be it
 
 import json
 import re
-from typing import Any
+from typing import Any, Dict
 import nest_asyncio
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.workflow import Event
 from llama_index.core.workflow import (
@@ -26,7 +28,6 @@ from src.configs import (
     REVIEW_CONTEXT,
     REVIEWER_PROMPT,
     JSON_REFLECTION_PROMPT)
-
 
 nest_asyncio.apply()
 
@@ -74,12 +75,13 @@ class JsonCheckError(Event):
     error: Any
 
 
-class WorkItemWorkflow(Workflow):
+class ActionItemsWorkflow(Workflow):
     """Workflow for processing meeting notes and generating action items.
 
     This workflow takes meeting notes as input and generates structured action items
     through a multi-step process including creation, review, and JSON validation.
     """
+
     def __init__(
         self,
         *args: Any,
@@ -220,7 +222,43 @@ class WorkItemWorkflow(Workflow):
                     wrong_answer=event.action_items,
                     error='no Json was found in the output'
                 )
-            json.loads(match.group(0))
-            return StopEvent(result=match.group(0))
+            j = json.loads(match.group(0))
+            return StopEvent(result=j)
         except json.JSONDecodeError as err:
             return JsonCheckError(wrong_answer=event.action_items, error=err)
+
+
+class MeetingNotes(BaseModel):
+    """The request model for a user's query."""
+    meeting_notes: str
+
+
+class ActionItemsResponse(BaseModel):
+    """The response model for the agent's answer."""
+    action_items: Dict
+
+
+app = FastAPI(
+    title='Work item workflow',
+    description='Work item workflow endpoints',
+    version="1.0.0",
+)
+
+
+@app.post("/action-items", response_model=ActionItemsResponse)
+async def create_action_items_endpoint(request: MeetingNotes):
+    """Action items workflow"""
+    try:
+        workflow = ActionItemsWorkflow(
+            timeout=30,
+            verbose=True,
+            max_iterations=20
+        )
+        res = await workflow.run(
+            meeting_notes=request.meeting_notes)
+        return ActionItemsResponse(action_items=res)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing request: {e}"
+        ) from e
