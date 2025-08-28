@@ -79,7 +79,7 @@ class JiraToolSpec(BaseToolSpec):
             raise JIRAError from e
 
     def create_jira_issue(
-        self, issue_fields: Dict, issue_type: str | None = "task"
+        self, issue_fields: Dict, issue_type: str = "task"
     ) -> Issue:
         """
         Create a new Jira issue using the provided field values.

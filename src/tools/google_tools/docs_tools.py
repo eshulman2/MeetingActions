@@ -39,14 +39,15 @@ class DocsToolSpec(BaseToolSpec):
                 for row in table.get("tableRows"):
                     cells = row.get("tableCells")
                     for cell in cells:
-                        text += self.read_structural_elements(cell.get("content"))
+                        text += self.read_structural_elements(
+                            cell.get("content"))
             elif "tableOfContents" in value:
                 # The text in the TOC is also in a structural element.
                 toc = value.get("tableOfContents")
                 text += self.read_structural_elements(toc.get("content"))
         return text
 
-    def get_google_doc_title(self, document_id: str) -> str:
+    def get_google_doc_title(self, document_id: str) -> str | None:
         """Gets a google doc file title"""
         try:
             # Retrieve the document from the API
@@ -67,7 +68,7 @@ class DocsToolSpec(BaseToolSpec):
 
         return None
 
-    def fetch_google_doc_content(self, document_id: str) -> str:
+    def fetch_google_doc_content(self, document_id: str) -> str | None:
         """
         Fetches and returns the text content of a Google Doc.
 

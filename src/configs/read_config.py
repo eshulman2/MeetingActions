@@ -13,10 +13,10 @@ class ConfigSchema(BaseModel):
     llm: str
     model: str
     api_key: str | None = None
-    additional_model_parameter: Dict[str, Any] | None = {}
-    tools_config: Dict[str, Any] | None = {}
-    agent_config: Dict[str, Any] | None = {}
-    mcp_config: Dict[str, Any] | None = {}
+    additional_model_parameter: Dict[str, Any] = {}
+    tools_config: Dict[str, Any] = {}
+    agent_config: Dict[str, Any] = {}
+    mcp_config: Dict[str, Any] = {}
 
 
 class ConfigReader:
@@ -24,7 +24,7 @@ class ConfigReader:
 
     def __init__(
         self, path=os.environ.get("CONFIG_PATH", "config.json")
-    ) -> ConfigSchema:
+    ) -> None:
         with open(path, "r") as config:
             try:
                 config = json.load(config)
