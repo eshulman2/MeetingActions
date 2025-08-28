@@ -9,6 +9,7 @@ class JiraFormatter:
     specific JSON structures required by different Jira field types when
     making API calls to create or update issues.
     """
+
     @staticmethod
     def options(value):
         """
@@ -20,7 +21,7 @@ class JiraFormatter:
         Returns:
             dict: A dictionary with 'value' key containing the input value
         """
-        return {'value': value}
+        return {"value": value}
 
     @staticmethod
     def user(value):
@@ -33,7 +34,7 @@ class JiraFormatter:
         Returns:
             dict: A dictionary with 'name' key containing the username
         """
-        return {'name': value}
+        return {"name": value}
 
     @staticmethod
     def array(value):
@@ -46,7 +47,7 @@ class JiraFormatter:
         Returns:
             list: A list of dictionaries, each containing a 'value' key
         """
-        return [{'value': v for v in value}]
+        return [{"value": v for v in value}]
 
     @staticmethod
     def number(value):
@@ -111,7 +112,7 @@ class JiraFormatter:
         Returns:
             dict: A dictionary with 'key' containing the project identifier
         """
-        return {'key': value}
+        return {"key": value}
 
     @staticmethod
     def version(value):
@@ -124,7 +125,7 @@ class JiraFormatter:
         Returns:
             dict: A dictionary with 'name' containing the version identifier
         """
-        return {'name': value}
+        return {"name": value}
 
     @staticmethod
     def datetime(value):
@@ -154,4 +155,4 @@ class JiraFormatter:
         Returns:
             dict: A dictionary with 'name' containing the issue type identifier
         """
-        return {'name': value}
+        return {"name": value}

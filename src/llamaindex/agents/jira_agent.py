@@ -1,6 +1,7 @@
 """
 This module is a Jira agent with a simple API server for Jira operations.
 """
+
 import os
 import nest_asyncio
 from llama_index.core.agent.workflow import ReActAgent
@@ -19,16 +20,16 @@ class JiraAgentServer(BaseAgentServer):
     """Jira agent server implementation."""
 
     def create_agent(self, llm):
-        tools = DateToolsSpecs().to_tool_list() + JiraToolSpec(
-            api_token=os.environ.get('JIRA_API_TOKEN'),
-            **config.config.tools_config["jira_tool"]).to_tool_list() \
-            + safe_load_mcp_tools(config.config.mcp_config.get('servers', []))
-
-        jira_agent = ReActAgent(
-            tools=tools,
-            llm=llm.llm,
-            **config.config.agent_config
+        tools = (
+            DateToolsSpecs().to_tool_list()
+            + JiraToolSpec(
+                api_token=os.environ.get("JIRA_API_TOKEN"),
+                **config.config.tools_config["jira_tool"]
+            ).to_tool_list()
+            + safe_load_mcp_tools(config.config.mcp_config.get("servers", []))
         )
+
+        jira_agent = ReActAgent(tools=tools, llm=llm.llm, **config.config.agent_config)
 
         return jira_agent
 
@@ -44,7 +45,7 @@ class JiraAgentServer(BaseAgentServer):
 server = JiraAgentServer(
     llm=ModelFactory(config.config),
     title="Jira Agent",
-    description="An API to expose a LlamaIndex ReActAgent for Jira operations."
+    description="An API to expose a LlamaIndex ReActAgent for Jira operations.",
 )
 app = server.app
 

@@ -68,7 +68,8 @@ Please use the following review to improve the way they are written:
 {review}
 
 Reply only with the new action items text.
-""")
+"""
+)
 
 REVIEWER_PROMPT = PromptTemplate(
     """
@@ -91,4 +92,5 @@ This caused the JSON decode error: {error}
 
 Try again, the response must contain only valid JSON code. Do not add any sentence before or after the JSON object.
 Do not repeat the schema.
-""")
+"""
+)

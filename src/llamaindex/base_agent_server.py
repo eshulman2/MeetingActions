@@ -1,6 +1,7 @@
 """
 Base agent server module providing common FastAPI functionality for all agents.
 """
+
 from abc import ABC, abstractmethod
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -11,11 +12,13 @@ from llama_index.core.workflow import Context
 
 class ChatQuery(BaseModel):
     """The request model for a user's query."""
+
     query: str
 
 
 class ChatResponse(BaseModel):
     """The response model for the agent's answer."""
+
     response: str
 
 
@@ -40,13 +43,11 @@ class BaseAgentServer(ABC):
         async def test_endpoint(request: ChatQuery):
             """Test endpoint with no additional context."""
             try:
-                agent_response = await self.agent.run(request.query,
-                                                      ctx=self.ctx)
+                agent_response = await self.agent.run(request.query, ctx=self.ctx)
                 return ChatResponse(response=str(agent_response))
             except Exception as e:
                 raise HTTPException(
-                    status_code=500,
-                    detail=f"Error processing request: {e}"
+                    status_code=500, detail=f"Error processing request: {e}"
                 ) from e
 
         @self.app.post("/agent", response_model=ChatResponse)
@@ -54,20 +55,16 @@ class BaseAgentServer(ABC):
             """Main agent endpoint with context."""
             try:
                 agent_context = ChatMessage(
-                    role='system',
-                    content=self.get_agent_context()
+                    role="system", content=self.get_agent_context()
                 )
                 agent_response = await self.agent.run(
-                    request.query,
-                    chat_history=[agent_context],
-                    ctx=self.ctx
+                    request.query, chat_history=[agent_context], ctx=self.ctx
                 )
                 return ChatResponse(response=str(agent_response))
             # pylint: disable=duplicate-code
             except Exception as e:
                 raise HTTPException(
-                    status_code=500,
-                    detail=f"Error processing query: {e}"
+                    status_code=500, detail=f"Error processing query: {e}"
                 ) from e
 
         @self.app.get("/")
