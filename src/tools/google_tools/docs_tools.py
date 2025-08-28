@@ -39,8 +39,7 @@ class DocsToolSpec(BaseToolSpec):
                 for row in table.get("tableRows"):
                     cells = row.get("tableCells")
                     for cell in cells:
-                        text += self.read_structural_elements(
-                            cell.get("content"))
+                        text += self.read_structural_elements(cell.get("content"))
             elif "tableOfContents" in value:
                 # The text in the TOC is also in a structural element.
                 toc = value.get("tableOfContents")
@@ -59,7 +58,10 @@ class DocsToolSpec(BaseToolSpec):
 
         except HttpError as err:
             if err.resp.status == 404:
-                return "The requested document was not found. Please check the DOCUMENT_ID."
+                return (
+                    "The requested document was not found."
+                    "Please check the DOCUMENT_ID."
+                )
         except FileNotFoundError:
             return "Error: `credentials.json` not found."
         # pylint: disable=broad-exception-caught
@@ -76,7 +78,8 @@ class DocsToolSpec(BaseToolSpec):
             document_id: The ID of the Google Doc to fetch.
 
         Returns:
-            A string containing the text content of the document, or None if an error occurs.
+            A string containing the text content of the document,
+            or None if an error occurs.
         """
         try:
             # Retrieve the document from the API
@@ -97,12 +100,13 @@ class DocsToolSpec(BaseToolSpec):
             print(f"An API error occurred: {err}")
             if err.resp.status == 404:
                 print(
-                    "The requested document was not found. Please check the DOCUMENT_ID."
+                    "The requested document was not found. Please check the"
+                    "DOCUMENT_ID."
                 )
             return None
         except FileNotFoundError:
             print("Error: `credentials.json` not found.")
-            print("Please follow the setup instructions in the script's comments.")
+            print("Please follow the setup instructions in the script's ", "comments.")
             return None
         # pylint: disable=broad-exception-caught
         except Exception as e:

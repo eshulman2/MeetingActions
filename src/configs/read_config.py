@@ -22,9 +22,7 @@ class ConfigSchema(BaseModel):
 class ConfigReader:
     """Class for loading user configuration"""
 
-    def __init__(
-        self, path=os.environ.get("CONFIG_PATH", "config.json")
-    ) -> None:
+    def __init__(self, path=os.environ.get("CONFIG_PATH", "config.json")) -> None:
         with open(path, "r") as config:
             try:
                 config = json.load(config)

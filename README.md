@@ -256,4 +256,3 @@ Each agent has specific context defined in `src/configs/agents_contexts.py`:
 ## 📝 License
 
 This project is for educational purposes. Please ensure you comply with the terms of service for all integrated APIs (Google, Jira, etc.).
-
