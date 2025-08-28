@@ -7,8 +7,8 @@ from llama_index.core.agent.workflow import ReActAgent
 from src.configs import ConfigReader, ModelFactory, JIRA_AGENT_CONTEXT
 from src.tools.general_tools import DateToolsSpecs
 from src.tools.jira_tools import JiraToolSpec
-from src.llamaindex_agents.base_agent_server import BaseAgentServer
-from src.llamaindex_agents.utils import safe_load_mcp_tools
+from src.llamaindex.base_agent_server import BaseAgentServer
+from src.llamaindex.utils import safe_load_mcp_tools
 
 nest_asyncio.apply()
 

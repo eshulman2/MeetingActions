@@ -12,8 +12,8 @@ from src.configs import (ModelFactory, ConfigReader,
                          GOOGLE_AGENT_CONTEXT, GOOGLE_MEETING_NOTES)
 from src.tools.google_tools import CalendarToolSpec, DocsToolSpec
 from src.tools.general_tools import DateToolsSpecs
-from src.llamaindex_agents.base_agent_server import BaseAgentServer
-from src.llamaindex_agents.utils import safe_load_mcp_tools
+from src.llamaindex.base_agent_server import BaseAgentServer
+from src.llamaindex.utils import safe_load_mcp_tools
 
 nest_asyncio.apply()
 
