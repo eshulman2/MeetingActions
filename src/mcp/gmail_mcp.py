@@ -2,6 +2,7 @@
 
 from fastmcp import FastMCP
 from llama_index.tools.google import GmailToolSpec
+
 from src.configs.read_config import ConfigReader
 
 config = ConfigReader()

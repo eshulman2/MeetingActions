@@ -1,11 +1,13 @@
 """Google calendar tools specs"""
 
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
+
 import tzlocal
-from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
+
 from .utils import authenticate
 
 

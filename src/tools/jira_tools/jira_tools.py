@@ -1,9 +1,11 @@
 """Jira tools specs"""
 
-from typing import List, Dict, Any
-from llama_index.core.tools.tool_spec.base import BaseToolSpec
+from typing import Any, Dict, List
+
 from jira import JIRA, JIRAError
 from jira.resources import Issue
+from llama_index.core.tools.tool_spec.base import BaseToolSpec
+
 from .jira_formatter import JiraFormatter
 
 

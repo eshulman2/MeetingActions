@@ -1,8 +1,9 @@
 """module for reading configuration"""
 
-from typing import Dict, Any
 import json
 import os
+from typing import Any, Dict
+
 from pydantic import BaseModel, ValidationError
 
 

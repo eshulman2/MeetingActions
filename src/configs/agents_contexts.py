@@ -4,7 +4,6 @@ This module used for statically storing agents context
 """
 from llama_index.core.prompts import PromptTemplate
 
-
 ACTION_ITEMS_CONTEXT = """
 You are an action item assistant. Your job is to help generate a list of
 action items from meeting notes.

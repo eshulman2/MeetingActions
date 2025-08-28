@@ -3,11 +3,12 @@ Base agent server module providing common FastAPI functionality for all agents.
 """
 
 from abc import ABC, abstractmethod
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.llms import ChatMessage
 from llama_index.core.workflow import Context
+from pydantic import BaseModel
 
 
 class ChatQuery(BaseModel):
