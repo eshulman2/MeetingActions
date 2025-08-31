@@ -28,10 +28,9 @@ nest_asyncio.apply()
 config = ConfigReader()
 
 
-class MeetingNoteFormat(BaseModel):
+class AgentResponseFormat(BaseModel):
     """test format for meeting note endpoint reply"""
 
-    link: str = Field(description="link to meeting notes file")
     content: str = Field(description="the agent message", default=None)
     error: bool = Field(
         description="field indicating on rather or not an error occurred"
@@ -55,7 +54,7 @@ class GoogleAgentServer(BaseAgentServer):
         google_agent = ReActAgent(
             tools=tools,
             llm=llm.llm,
-            output_cls=MeetingNoteFormat,
+            output_cls=AgentResponseFormat,
             **config.config.agent_config,
         )
         logger.info("Google agent created successfully")
