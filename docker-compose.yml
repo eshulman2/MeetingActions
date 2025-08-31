@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  jira-agent:
+    image: jira-agent
+    build:
+      context: .
+      dockerfile: containers/Dockerfile.llamaindex-jira-agent
+    user: "1000:1000"
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+      - MODEL_API_KEY=${MODEL_API_KEY}
+      - CONFIG_PATH=/app/config.json
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config.json:/app/config.json:ro,z
+      - ./logs:/app/logs:rw,z
+    restart: unless-stopped
+
+  google-agent:
+    image: google-agent
+    build:
+      context: .
+      dockerfile: containers/Dockerfile.llamaindex-google-agent
+    user: "1000:1000"
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONPATH=/app
+      - MODEL_API_KEY=${MODEL_API_KEY}
+      - CONFIG_PATH=/app/config.json
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config.json:/app/config.json:ro,z
+      - ./logs:/app/logs:rw,z
+    restart: unless-stopped
+
+  llamaindex-workflows:
+    image: llamaindex-workflows
+    build:
+      context: .
+      dockerfile: containers/Dockerfile.llamaindex-workflows
+    user: "1000:1000"
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONPATH=/app
+      - MODEL_API_KEY=${MODEL_API_KEY}
+      - CONFIG_PATH=/app/config.json
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config.json:/app/config.json:ro,z
+      - ./logs:/app/logs:rw,z
+    restart: unless-stopped
+
+  google-mcp:
+    image: google-tools-mcp
+    user: "1000:1000"
+    build:
+      context: .
+      dockerfile: containers/Dockerfile.google-mcp
+    ports:
+      - "8100:8100"
+    environment:
+      - PYTHONPATH=/app
+      - MODEL_API_KEY=${MODEL_API_KEY}
+      - CONFIG_PATH=/app/config.json
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config.json:/app/config.json:ro,z
+      - ./logs:/app/logs:rw,z
+      - ./service-account.json:/app/service-account.json:ro,Z
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge
