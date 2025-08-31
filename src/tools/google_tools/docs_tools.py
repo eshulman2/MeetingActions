@@ -61,7 +61,9 @@ class DocsToolSpec(BaseToolSpec):
             # Retrieve the document from the API
             # pylint: disable=no-member
             document = (
-                self.service.documents().get(documentId=document_id).execute()
+                self.service.documents()
+                .get(documentId=document_id, fields="title")
+                .execute()
             )
 
             title = document.get("title")
