@@ -12,6 +12,14 @@
     },
     "mcp_config": {
         "port": 8002,
-        "servers": ["http://127.0.0.1:8002/mcp"]
+        "servers": [
+            "http://127.0.0.1:8002/mcp"
+        ]
+    },
+    "observability": {
+        "enable": true,
+        "secret_key": "******************************************",
+        "public_key": "******************************************",
+        "host": "http://localhost:3000"
     }
 }

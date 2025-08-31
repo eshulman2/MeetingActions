@@ -21,6 +21,7 @@ from llama_index.core.workflow import (
 )
 from pydantic import BaseModel
 
+from src import config
 from src.configs import (
     ACTION_ITEMS_CONTEXT,
     ACTION_ITEMS_PROMPT,
@@ -28,7 +29,6 @@ from src.configs import (
     REFLECTION_PROMPT,
     REVIEW_CONTEXT,
     REVIEWER_PROMPT,
-    ConfigReader,
     ModelFactory,
 )
 from src.configs.logging_config import get_logger
@@ -37,7 +37,6 @@ logger = get_logger("workflows.action_items_workflow")
 
 nest_asyncio.apply()
 
-config = ConfigReader()
 llm = ModelFactory(config.config)
 
 
@@ -107,7 +106,8 @@ class ActionItemsWorkflow(Workflow):
             **kwargs: Additional keyword arguments passed to parent Workflow
         """
         logger.info(
-            f"Initializing ActionItemsWorkflow with max_iterations: {max_iterations}"
+            "Initializing ActionItemsWorkflow with max_iterations: "
+            f"{max_iterations}"
         )
 
         # Initialize the super class

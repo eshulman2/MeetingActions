@@ -9,10 +9,10 @@ from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.llms import ChatMessage
 from pydantic import BaseModel, Field
 
+from src import config
 from src.configs import (
     GOOGLE_AGENT_CONTEXT,
     GOOGLE_MEETING_NOTES,
-    ConfigReader,
     ModelFactory,
 )
 from src.configs.logging_config import get_logger
@@ -24,8 +24,6 @@ from src.tools.google_tools import CalendarToolSpec, DocsToolSpec
 logger = get_logger("agents.google")
 
 nest_asyncio.apply()
-
-config = ConfigReader()
 
 
 class AgentResponseFormat(BaseModel):

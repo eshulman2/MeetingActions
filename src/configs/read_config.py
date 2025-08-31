@@ -17,6 +17,7 @@ class ConfigSchema(BaseModel):
     tools_config: Dict[str, Any] = {}
     agent_config: Dict[str, Any] = {}
     mcp_config: Dict[str, Any] = {}
+    observability: Dict[str, Any] = {}
 
 
 class ConfigReader:

@@ -7,7 +7,8 @@ import os
 import nest_asyncio
 from llama_index.core.agent.workflow import ReActAgent
 
-from src.configs import JIRA_AGENT_CONTEXT, ConfigReader, ModelFactory
+from src import config
+from src.configs import JIRA_AGENT_CONTEXT, ModelFactory
 from src.configs.logging_config import get_logger
 from src.llamaindex.base_agent_server import BaseAgentServer
 from src.llamaindex.utils import safe_load_mcp_tools
@@ -17,8 +18,6 @@ from src.tools.jira_tools import JiraToolSpec
 logger = get_logger("agents.jira")
 
 nest_asyncio.apply()
-
-config = ConfigReader()
 
 
 class JiraAgentServer(BaseAgentServer):

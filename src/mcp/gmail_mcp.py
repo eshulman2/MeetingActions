@@ -3,9 +3,8 @@
 from fastmcp import FastMCP
 from llama_index.tools.google import GmailToolSpec
 
-from src.configs.read_config import ConfigReader
+from src import config
 
-config = ConfigReader()
 tools = GmailToolSpec().to_tool_list()
 
 mcp_server = FastMCP("Google tools mcp server")
