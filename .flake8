@@ -1,0 +1,3 @@
+[flake8]
+per-file-ignores =
+    src/configs/agents_contexts.py: E501
