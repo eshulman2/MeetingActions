@@ -4,7 +4,11 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
+from src.configs.logging_config import get_logger
+
 from .utils import authenticate
+
+logger = get_logger("google_tools.docs")
 
 
 class DocsToolSpec(BaseToolSpec):
@@ -13,7 +17,9 @@ class DocsToolSpec(BaseToolSpec):
     spec_functions = ["get_google_doc_title", "fetch_google_doc_content"]
 
     def __init__(self):
+        logger.info("Initializing Google Docs tool spec")
         self.service = build("docs", "v1", credentials=authenticate())
+        logger.debug("Google Docs service initialized successfully")
 
     def read_paragraph_element(self, element):
         """Returns the text from a TextRun element."""
@@ -39,7 +45,9 @@ class DocsToolSpec(BaseToolSpec):
                 for row in table.get("tableRows"):
                     cells = row.get("tableCells")
                     for cell in cells:
-                        text += self.read_structural_elements(cell.get("content"))
+                        text += self.read_structural_elements(
+                            cell.get("content")
+                        )
             elif "tableOfContents" in value:
                 # The text in the TOC is also in a structural element.
                 toc = value.get("tableOfContents")
@@ -48,25 +56,36 @@ class DocsToolSpec(BaseToolSpec):
 
     def get_google_doc_title(self, document_id: str) -> str | None:
         """Gets a google doc file title"""
+        logger.info(f"Getting title for document: {document_id}")
         try:
             # Retrieve the document from the API
             # pylint: disable=no-member
-            document = self.service.documents().get(documentId=document_id).execute()
+            document = (
+                self.service.documents().get(documentId=document_id).execute()
+            )
 
             title = document.get("title")
+            logger.info(f"Successfully retrieved document title: {title}")
             return title
 
         except HttpError as err:
+            logger.error(f"HTTP error occurred: {err}")
             if err.resp.status == 404:
-                return (
+                error_msg = (
                     "The requested document was not found."
                     "Please check the DOCUMENT_ID."
                 )
+                logger.warning(f"Document not found: {document_id}")
+                return error_msg
         except FileNotFoundError:
-            return "Error: `credentials.json` not found."
+            error_msg = "Error: `credentials.json` not found."
+            logger.error(error_msg)
+            return error_msg
         # pylint: disable=broad-exception-caught
         except Exception as e:
-            return f"An unexpected error occurred: {e}"
+            error_msg = f"An unexpected error occurred: {e}"
+            logger.error(error_msg)
+            return error_msg
 
         return None
 
@@ -81,12 +100,17 @@ class DocsToolSpec(BaseToolSpec):
             A string containing the text content of the document,
             or None if an error occurs.
         """
+        logger.info(f"Fetching content for document: {document_id}")
         try:
             # Retrieve the document from the API
             # pylint: disable=no-member
-            document = self.service.documents().get(documentId=document_id).execute()
+            document = (
+                self.service.documents().get(documentId=document_id).execute()
+            )
+            logger.debug("Document retrieved successfully from API")
 
-            print(f"The title of the document is: {document.get('title')}")
+            title = document.get("title")
+            logger.info(f"Document title: {title}")
 
             # Extract the text from the document's body
             doc_content = document.get("body").get("content")
@@ -97,18 +121,19 @@ class DocsToolSpec(BaseToolSpec):
             return text_content
 
         except HttpError as err:
-            print(f"An API error occurred: {err}")
+            logger.error(f"HTTP API error occurred: {err}")
             if err.resp.status == 404:
-                print(
-                    "The requested document was not found. Please check the"
-                    "DOCUMENT_ID."
+                logger.warning(
+                    f"Document not found: {document_id}. Please check the DOCUMENT_ID."
                 )
             return None
         except FileNotFoundError:
-            print("Error: `credentials.json` not found.")
-            print("Please follow the setup instructions in the script's ", "comments.")
+            logger.error("credentials.json not found")
+            logger.info(
+                "Please follow the setup instructions in the script's comments"
+            )
             return None
         # pylint: disable=broad-exception-caught
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            logger.error(f"Unexpected error occurred: {e}")
             return None

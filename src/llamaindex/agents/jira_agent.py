@@ -8,10 +8,13 @@ import nest_asyncio
 from llama_index.core.agent.workflow import ReActAgent
 
 from src.configs import JIRA_AGENT_CONTEXT, ConfigReader, ModelFactory
+from src.configs.logging_config import get_logger
 from src.llamaindex.base_agent_server import BaseAgentServer
 from src.llamaindex.utils import safe_load_mcp_tools
 from src.tools.general_tools import DateToolsSpecs
 from src.tools.jira_tools import JiraToolSpec
+
+logger = get_logger("agents.jira")
 
 nest_asyncio.apply()
 
@@ -22,34 +25,42 @@ class JiraAgentServer(BaseAgentServer):
     """Jira agent server implementation."""
 
     def create_agent(self, llm):
+        logger.info("Creating Jira agent with tools")
         tools = (
             DateToolsSpecs().to_tool_list()
             + JiraToolSpec(
                 api_token=os.environ.get("JIRA_API_TOKEN"),
-                **config.config.tools_config["jira_tool"]
+                **config.config.tools_config["jira_tool"],
             ).to_tool_list()
             + safe_load_mcp_tools(config.config.mcp_config.get("servers", []))
         )
+        logger.debug(f"Loaded {len(tools)} tools for Jira agent")
 
-        jira_agent = ReActAgent(tools=tools, llm=llm.llm, **config.config.agent_config)
+        jira_agent = ReActAgent(
+            tools=tools, llm=llm.llm, **config.config.agent_config
+        )
+        logger.info("Jira agent created successfully")
 
         return jira_agent
 
     def get_agent_context(self) -> str:
         """Return the Jira agent context."""
+        logger.debug("Retrieving Jira agent context")
         return JIRA_AGENT_CONTEXT
 
     def additional_routes(self):
-        pass
+        logger.debug("No additional routes defined for Jira agent")
 
 
 # Initialize the server
+logger.info("Initializing Jira agent server")
 server = JiraAgentServer(
     llm=ModelFactory(config.config),
     title="Jira Agent",
     description="An API to expose a LlamaIndex ReActAgent for Jira operations.",
 )
 app = server.app
+logger.info("Jira agent server initialized successfully")
 
 if __name__ == "__main__":
     print("To run this app, use the following command in your terminal:")

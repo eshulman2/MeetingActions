@@ -38,5 +38,7 @@ class ModelFactory:
 
         llm_object = SUPPORTED_LLMS.get(config.llm)
         self.llm = llm_object(
-            model=config.model, api_key=api_key, **config.additional_model_parameter
+            model=config.model,
+            api_key=api_key,
+            **config.additional_model_parameter,
         )

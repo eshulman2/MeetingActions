@@ -15,10 +15,13 @@ from src.configs import (
     ConfigReader,
     ModelFactory,
 )
+from src.configs.logging_config import get_logger
 from src.llamaindex.base_agent_server import BaseAgentServer
 from src.llamaindex.utils import safe_load_mcp_tools
 from src.tools.general_tools import DateToolsSpecs
 from src.tools.google_tools import CalendarToolSpec, DocsToolSpec
+
+logger = get_logger("agents.google")
 
 nest_asyncio.apply()
 
@@ -40,12 +43,14 @@ class GoogleAgentServer(BaseAgentServer):
 
     def create_agent(self, llm):
         """Return agent"""
+        logger.info("Creating Google agent with tools")
         tools = (
             CalendarToolSpec().to_tool_list()
             + DocsToolSpec().to_tool_list()
             + DateToolsSpecs().to_tool_list()
             + safe_load_mcp_tools(config.config.mcp_config.get("servers", []))
         )
+        logger.debug(f"Loaded {len(tools)} tools for Google agent")
 
         google_agent = ReActAgent(
             tools=tools,
@@ -53,17 +58,22 @@ class GoogleAgentServer(BaseAgentServer):
             output_cls=MeetingNoteFormat,
             **config.config.agent_config,
         )
+        logger.info("Google agent created successfully")
 
         return google_agent
 
     def get_agent_context(self) -> str:
         """Return the action item agent context."""
+        logger.debug("Retrieving Google agent context")
         return GOOGLE_AGENT_CONTEXT
 
     def additional_routes(self):
         @self.app.get("/meeting-notes")
         async def meeting_notes(date: str, meeting: str):
             """Main agent endpoint with context."""
+            logger.info(
+                f"Processing meeting notes request for date: {date}, meeting: {meeting}"
+            )
             try:
                 agent_context = ChatMessage(
                     role="system", content=self.get_agent_context()
@@ -75,15 +85,18 @@ class GoogleAgentServer(BaseAgentServer):
                     ctx=self.ctx,
                 )
 
+                logger.info("Meeting notes request processed successfully")
                 return agent_response.structured_response
             # pylint: disable=duplicate-code
             except Exception as e:
+                logger.error(f"Error processing meeting notes request: {e}")
                 raise HTTPException(
                     status_code=500, detail=f"Error processing query: {e}"
                 ) from e
 
 
 # Initialize the server
+logger.info("Initializing Google agent server")
 server = GoogleAgentServer(
     llm=ModelFactory(config.config),
     title="Google Agent",
@@ -91,6 +104,7 @@ server = GoogleAgentServer(
         ReActAgent for Google api access.",
 )
 app = server.app
+logger.info("Google agent server initialized successfully")
 
 if __name__ == "__main__":
     print("Make sure your Google API credentials are properly configured.")

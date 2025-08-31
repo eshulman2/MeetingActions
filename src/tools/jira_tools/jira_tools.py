@@ -6,6 +6,8 @@ from jira import JIRA, JIRAError
 from jira.resources import Issue
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
+from src.configs.logging_config import get_logger
+
 from .jira_formatter import JiraFormatter
 
 
@@ -22,14 +24,23 @@ class JiraToolSpec(BaseToolSpec):
     ]
 
     def __init__(self, api_token: str, server: str):
+        self.logger = get_logger("tools.jira_tools")
+        self.logger.info(f"Initializing Jira client for server: {server}")
         self.jira_client = JIRA(server=server, token_auth=api_token)
+        self.logger.info("Jira client initialized successfully")
 
     def get_fields_name_to_id(self) -> Dict[str, str]:
         """Get mapping of field name to jira field id.
         all names will be using lower()"""
+        self.logger.debug("Getting field name to ID mapping")
         try:
-            return {f["name"].lower(): f["id"] for f in self.jira_client.fields()}
+            result = {
+                f["name"].lower(): f["id"] for f in self.jira_client.fields()
+            }
+            self.logger.info(f"Retrieved {len(result)} field mappings")
+            return result
         except JIRAError as e:
+            self.logger.error(f"Failed to get field mappings: {e}")
             raise JIRAError from e
 
     def get_fields_id_to_name(self) -> Dict[str, str]:
@@ -55,17 +66,24 @@ class JiraToolSpec(BaseToolSpec):
 
     def list_projects(self) -> List[str]:
         """List all projects viewable by user"""
+        self.logger.debug("Listing all projects")
         try:
             projects = self.jira_client.projects()
-            return sorted(project.key for project in projects)
+            result = sorted(project.key for project in projects)
+            self.logger.info(f"Retrieved {len(result)} projects")
+            return result
         except JIRAError as e:
+            self.logger.error(f"Failed to list projects: {e}")
             raise JIRAError from e
 
     def add_comment(self, issue: str, comment: str) -> None:
         """Add comment on a jira issue"""
+        self.logger.debug(f"Adding comment to issue {issue}")
         try:
             self.jira_client.add_comment(issue, comment)
+            self.logger.info(f"Successfully added comment to issue {issue}")
         except JIRAError as e:
+            self.logger.error(f"Failed to add comment to issue {issue}: {e}")
             raise JIRAError from e
 
     def search_jira_issues(
@@ -73,12 +91,24 @@ class JiraToolSpec(BaseToolSpec):
     ) -> list[Issue]:
         """Searches jira issues using JQL (Jira query langue).
         Returns 50 results by default, for more results set max_results"""
+        self.logger.debug(
+            f"Searching issues with query: {query}, max_results: {max_results}"
+        )
         try:
-            return self.jira_client.search_issues(query, maxResults=max_results)
+            result = self.jira_client.search_issues(
+                query, maxResults=max_results
+            )
+            self.logger.info(f"Found {len(result)} issues for query: {query}")
+            return result
         except JIRAError as e:
+            self.logger.error(
+                f"Failed to search issues with query '{query}': {e}"
+            )
             raise JIRAError from e
 
-    def create_jira_issue(self, issue_fields: Dict, issue_type: str = "task") -> Issue:
+    def create_jira_issue(
+        self, issue_fields: Dict, issue_type: str = "task"
+    ) -> Issue:
         """
         Create a new Jira issue using the provided field values.
 
@@ -103,20 +133,30 @@ class JiraToolSpec(BaseToolSpec):
         fields_names_to_id = self.get_fields_name_to_id()
         issue = {}
 
+        self.logger.debug(
+            f"Creating issue with fields: {list(issue_fields.keys())}"
+            f", type: {issue_type}"
+        )
         try:
             for field, value in issue_fields.items():
                 formatter = getattr(
                     JiraFormatter,
-                    fields_ids_to_types.get(fields_names_to_id.get(field), "any"),
+                    fields_ids_to_types.get(
+                        fields_names_to_id.get(field), "any"
+                    ),
                 )
                 issue[fields_names_to_id.get(field)] = formatter(value)
 
-            issue["issuetype"] = JiraFormatter.issue_type(issue_type.capitalize())
+            issue["issuetype"] = JiraFormatter.issue_type(
+                issue_type.capitalize()
+            )
 
             new_issue = self.jira_client.create_issue(fields=issue)
+            self.logger.info(f"Successfully created issue: {new_issue.key}")
 
             return new_issue
         except JIRAError as e:
+            self.logger.error(f"Failed to create issue: {e}")
             raise JIRAError from e
 
     def get_jira_issue(
@@ -141,9 +181,12 @@ class JiraToolSpec(BaseToolSpec):
         Raises:
             JIRAError: If there is an error retrieving the issue from Jira.
         """
+        self.logger.debug(f"Getting issue details for: {issue_key}")
         try:
             issue = self.jira_client.issue(issue_key)
+            self.logger.info(f"Successfully retrieved issue: {issue_key}")
         except JIRAError as e:
+            self.logger.error(f"Failed to get issue {issue_key}: {e}")
             raise JIRAError from e
 
         if all_fields:
@@ -152,7 +195,8 @@ class JiraToolSpec(BaseToolSpec):
             fields_mapping = self.get_fields_id_to_name()
 
             issue_dict = {
-                fields_mapping[k]: v for k, v in issue.raw.get("fields").items()
+                fields_mapping[k]: v
+                for k, v in issue.raw.get("fields").items()
             }
         else:
             if field_filter is None:
@@ -161,7 +205,8 @@ class JiraToolSpec(BaseToolSpec):
             fields_mapping = self.get_fields_name_to_id()
 
             issue_dict = {
-                f: issue.get_field(fields_mapping[f.lower()]) for f in field_filter
+                f: issue.get_field(fields_mapping[f.lower()])
+                for f in field_filter
             }
 
         return issue_dict

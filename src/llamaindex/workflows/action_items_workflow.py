@@ -31,6 +31,9 @@ from src.configs import (
     ConfigReader,
     ModelFactory,
 )
+from src.configs.logging_config import get_logger
+
+logger = get_logger("workflows.action_items_workflow")
 
 nest_asyncio.apply()
 
@@ -98,21 +101,30 @@ class ActionItemsWorkflow(Workflow):
         """Initialize the WorkItemWorkflow.
 
         Args:
-            max_iterations: Maximum number of retry iterations for action item generation
+            max_iterations: Maximum number of retry iterations for
+                action item generation
             *args: Additional positional arguments passed to parent Workflow
             **kwargs: Additional keyword arguments passed to parent Workflow
         """
+        logger.info(
+            f"Initializing ActionItemsWorkflow with max_iterations: {max_iterations}"
+        )
 
         # Initialize the super class
         super().__init__(*args, **kwargs)
         # Store input into instance variables
         self.max_retries = max_iterations
         self.meeting_notes = None
-        self.memory = Memory.from_defaults(session_id="my_session", token_limit=40000)
+        self.memory = Memory.from_defaults(
+            session_id="my_session", token_limit=40000
+        )
+        logger.debug("ActionItemsWorkflow initialized successfully")
 
     @step
     async def create_action_items(
-        self, ctx: Context, event: StartEvent | ReviewErrorEvent | JsonCheckError
+        self,
+        ctx: Context,
+        event: StartEvent | ReviewErrorEvent | JsonCheckError,
     ) -> StopEvent | ActionItemsDone:
         """Create or refine action items based on meeting notes and feedback.
 
@@ -125,18 +137,27 @@ class ActionItemsWorkflow(Workflow):
             ActionItemsDone if action items were successfully created
         """
         current_retries = await ctx.store.get("retries", default=0)
+        logger.debug(
+            f"Creating action items, attempt {current_retries + 1}/{self.max_retries}"
+        )
+
         if current_retries >= self.max_retries:
+            logger.warning("Max retries reached for action items creation")
             return StopEvent(result="Max retries reached", error=True)
         await ctx.store.set("retries", current_retries + 1)
 
         if isinstance(event, StartEvent):
             self.meeting_notes = event.get("meeting_notes")
             if not self.meeting_notes:
+                logger.error("No meeting notes provided as input")
                 return StopEvent(result="no input was provided", error=True)
+            logger.info("Starting action items creation from meeting notes")
 
             self.memory.put_messages(
                 [
-                    ChatMessage(role=MessageRole.SYSTEM, content=ACTION_ITEMS_CONTEXT),
+                    ChatMessage(
+                        role=MessageRole.SYSTEM, content=ACTION_ITEMS_CONTEXT
+                    ),
                     ChatMessage(
                         role=MessageRole.USER,
                         content=ACTION_ITEMS_PROMPT.format(
@@ -147,6 +168,7 @@ class ActionItemsWorkflow(Workflow):
             )
 
         elif isinstance(event, ReviewErrorEvent):
+            logger.info("Refining action items based on review feedback")
             review = event.review
             action_items = event.action_items
             self.memory.put(
@@ -159,6 +181,7 @@ class ActionItemsWorkflow(Workflow):
             )
 
         elif isinstance(event, JsonCheckError):
+            logger.info("Fixing JSON formatting issues in action items")
             output = await llm.llm.achat(
                 [
                     ChatMessage(
@@ -169,13 +192,18 @@ class ActionItemsWorkflow(Workflow):
                     )
                 ]
             )
+            logger.debug("JSON formatting fix applied")
             print(output)
             return JsonCheckEvent(action_items=str(output))
 
         output = await llm.llm.achat(self.memory.get())
+        logger.debug("LLM response generated for action items")
 
-        self.memory.put(ChatMessage(role=MessageRole.ASSISTANT, content=output))
+        self.memory.put(
+            ChatMessage(role=MessageRole.ASSISTANT, content=output)
+        )
 
+        logger.info("Action items created successfully")
         return ActionItemsDone(action_items=str(output))
 
     @step
@@ -192,6 +220,7 @@ class ActionItemsWorkflow(Workflow):
             JsonCheckEvent if no changes required,
             ReviewErrorEvent if improvements are needed
         """
+        logger.info("Reviewing generated action items for quality")
         review = await llm.llm.achat(
             [
                 ChatMessage(role=MessageRole.SYSTEM, content=REVIEW_CONTEXT),
@@ -205,11 +234,17 @@ class ActionItemsWorkflow(Workflow):
             ]
         )
         if "No Changes Required" in str(review):
+            logger.info("Review passed: No changes required")
             return JsonCheckEvent(action_items=event.action_items)
-        return ReviewErrorEvent(action_items=event.action_items, review=str(review))
+        logger.info("Review identified issues: Changes required")
+        return ReviewErrorEvent(
+            action_items=event.action_items, review=str(review)
+        )
 
     @step
-    async def json_check(self, event: JsonCheckEvent) -> StopEvent | JsonCheckError:
+    async def json_check(
+        self, event: JsonCheckEvent
+    ) -> StopEvent | JsonCheckError:
         """Validate that action items are in proper JSON format.
 
         Args:
@@ -219,16 +254,20 @@ class ActionItemsWorkflow(Workflow):
             StopEvent with the valid JSON if successful,
             JsonCheckError if JSON parsing fails
         """
+        logger.info("Validating action items JSON format")
         try:
             match = re.search(r"\{.*\}", event.action_items, re.DOTALL)
             if not match:
+                logger.warning("No JSON found in action items output")
                 return JsonCheckError(
                     wrong_answer=event.action_items,
                     error="no Json was found in the output",
                 )
             j = json.loads(match.group(0))
+            logger.info("JSON validation successful")
             return StopEvent(result=j)
         except json.JSONDecodeError as err:
+            logger.error(f"JSON validation failed: {err}")
             return JsonCheckError(wrong_answer=event.action_items, error=err)
 
 
@@ -254,11 +293,19 @@ app = FastAPI(
 @app.post("/action-items", response_model=ActionItemsResponse)
 async def create_action_items_endpoint(request: MeetingNotes):
     """Action items workflow"""
+    logger.info(
+        f"Processing action items request with {len(request.meeting_notes)} "
+        "characters of meeting notes"
+    )
     try:
-        workflow = ActionItemsWorkflow(timeout=30, verbose=True, max_iterations=20)
+        workflow = ActionItemsWorkflow(
+            timeout=30, verbose=True, max_iterations=20
+        )
         res = await workflow.run(meeting_notes=request.meeting_notes)
+        logger.info("Action items workflow completed successfully")
         return ActionItemsResponse(action_items=res)
     except Exception as e:
+        logger.error(f"Error processing action items request: {e}")
         raise HTTPException(
             status_code=500, detail=f"Error processing request: {e}"
         ) from e
