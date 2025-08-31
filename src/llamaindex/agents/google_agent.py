@@ -19,7 +19,6 @@ from src.configs.logging_config import get_logger
 from src.llamaindex.base_agent_server import BaseAgentServer
 from src.llamaindex.utils import safe_load_mcp_tools
 from src.tools.general_tools import DateToolsSpecs
-from src.tools.google_tools import CalendarToolSpec, DocsToolSpec
 
 logger = get_logger("agents.google")
 
@@ -41,11 +40,8 @@ class GoogleAgentServer(BaseAgentServer):
     def create_agent(self, llm):
         """Return agent"""
         logger.info("Creating Google agent with tools")
-        tools = (
-            CalendarToolSpec().to_tool_list()
-            + DocsToolSpec().to_tool_list()
-            + DateToolsSpecs().to_tool_list()
-            + safe_load_mcp_tools(config.config.mcp_config.get("servers", []))
+        tools = DateToolsSpecs().to_tool_list() + safe_load_mcp_tools(
+            config.config.mcp_config.get("servers", [])
         )
         logger.debug(f"Loaded {len(tools)} tools for Google agent")
 

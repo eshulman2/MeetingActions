@@ -2,7 +2,6 @@
 Initialize Google tools specs
 """
 
-from .calendar_tools import CalendarToolSpec
-from .docs_tools import DocsToolSpec
+from .google_tools import GoogleToolSpec
 
-__all__ = ["CalendarToolSpec", "DocsToolSpec"]
+__all__ = ["GoogleToolSpec"]

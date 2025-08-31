@@ -16,6 +16,7 @@ logger = get_logger("google_tools.utils")
 SCOPES = [
     "https://www.googleapis.com/auth/documents.readonly",
     "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/meetings.space.readonly",
 ]
 
 
