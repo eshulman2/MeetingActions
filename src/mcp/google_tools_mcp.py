@@ -19,4 +19,5 @@ if __name__ == "__main__":
     mcp_server.run(
         transport="streamable-http",
         port=config.config.mcp_config.get("port", 8100),
+        host="0.0.0.0",
     )
