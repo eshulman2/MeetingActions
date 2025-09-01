@@ -71,7 +71,7 @@ services:
     volumes:
       - ./config.json:/app/config.json:ro,z
       - ./logs:/app/logs:rw,z
-      - ./service-account.json:/app/service-account.json:ro,Z
+      - ./service_account.json:/app/service_account.json:ro,Z
     restart: unless-stopped
 
 networks:
