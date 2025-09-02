@@ -8,9 +8,10 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
+from src import config
 from src.configs.logging_config import get_logger
-
-from .utils import authenticate
+from src.tools.google_tools.utils import authenticate
+from src.utils.redis_cache import get_cache
 
 logger = get_logger("google_tools.calendar")
 
@@ -41,6 +42,9 @@ class GoogleToolSpec(BaseToolSpec):
 
             self.docs_service = build("docs", "v1", credentials=authenticate())
             logger.debug("Google Docs service initialized successfully")
+
+            self.cache = get_cache()
+            logger.debug("Redis cache initialized")
 
         except HttpError as error:
             logger.error(
@@ -273,6 +277,13 @@ class GoogleToolSpec(BaseToolSpec):
     def get_google_doc_title(self, document_id: str) -> str | None:
         """Gets a google doc file title"""
         logger.info(f"Getting title for document: {document_id}")
+
+        # Check cache first
+        cached_title = self.cache.get_document_title(document_id)
+        if cached_title:
+            logger.debug(f"Retrieved title from cache: {cached_title}")
+            return cached_title
+
         try:
             # Retrieve the document from the API
             # pylint: disable=no-member
@@ -319,6 +330,14 @@ class GoogleToolSpec(BaseToolSpec):
             or None if an error occurs.
         """
         logger.info(f"Fetching content for document: {document_id}")
+
+        # Check cache first
+        logger.debug("Try fetching document content from cache")
+        cached_content = self.cache.get_document_content(document_id)
+        if cached_content:
+            logger.debug("Retrieved document content from cache")
+            return cached_content
+
         try:
             # Retrieve the document from the API
             # pylint: disable=no-member
@@ -327,6 +346,7 @@ class GoogleToolSpec(BaseToolSpec):
                 .get(documentId=document_id)
                 .execute()
             )
+
             logger.debug("Document retrieved successfully from API")
 
             title = document.get("title")
@@ -337,6 +357,25 @@ class GoogleToolSpec(BaseToolSpec):
 
             # Parse the structural elements to get the plain text
             text_content = self.read_structural_elements(doc_content)
+
+            # Cache the content
+            self.cache.set_document_content(document_id, text_content, title)
+
+            length = len(text_content)
+            logger.info(
+                f"Successfully extracted text content from document, "
+                f"length: {length} characters"
+            )
+
+            if length > config.config.max_document_length:
+                logger.warning(
+                    f"Document content length ({length}) exceeds the maximum "
+                    f"allowed ({config.config.max_document_length}). "
+                    "Truncating content."
+                )
+                return (
+                    "Document exceeds maximum length please read as paragraphs"
+                )
 
             return text_content
 

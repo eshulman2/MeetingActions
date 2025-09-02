@@ -12,12 +12,14 @@ class ConfigSchema(BaseModel):
 
     llm: str
     model: str
+    max_document_length: int = 2000
     api_key: str | None = None
     additional_model_parameter: Dict[str, Any] = {}
     tools_config: Dict[str, Any] = {}
     agent_config: Dict[str, Any] = {}
     mcp_config: Dict[str, Any] = {}
     observability: Dict[str, Any] = {}
+    cache_config: Dict[str, Any] = {}
 
 
 class ConfigReader:
