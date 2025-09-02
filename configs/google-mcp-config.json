@@ -1,0 +1,20 @@
+{
+    "mcp_config": {
+        "port": 8100
+
+    },
+    "observability": {
+        "enable": true,
+        "secret_key": "sk-lf-ede91f7c-281c-4fa9-ae83-19e04637e970",
+        "public_key": "pk-lf-0db6913f-2ebb-4286-816e-023986374857",
+        "host": "http://localhost:3000"
+    },
+    "cache_config": {
+        "enabled": true,
+        "ttl_hours": 1,
+        "max_size_mb": 100,
+        "host": "localhost",
+        "port": 6380,
+        "password": "12345"
+    }
+}

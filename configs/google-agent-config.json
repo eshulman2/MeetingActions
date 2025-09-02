@@ -1,0 +1,19 @@
+{
+    "llm": "Gemini",
+    "model": "gemini-2.0-flash",
+    "agent_config": {
+        "max_iterations": 20,
+        "verbose": true
+    },
+    "mcp_config": {
+        "servers": [
+            "http://127.0.0.1:8100/mcp"
+        ]
+    },
+    "observability": {
+        "enable": true,
+        "secret_key": "sk-lf-ede91f7c-281c-4fa9-ae83-19e04637e970",
+        "public_key": "pk-lf-0db6913f-2ebb-4286-816e-023986374857",
+        "host": "http://localhost:3000"
+    }
+}

@@ -10,8 +10,8 @@ from pydantic import BaseModel, ValidationError
 class ConfigSchema(BaseModel):
     """Config Schema for validation"""
 
-    llm: str
-    model: str
+    llm: str = "Gemini"
+    model: str = "gemini-2.0-flash"
     max_document_length: int = 2000
     api_key: str | None = None
     additional_model_parameter: Dict[str, Any] = {}
