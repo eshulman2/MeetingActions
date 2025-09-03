@@ -1,6 +1,7 @@
 """init for configs package"""
 
-from .agents_contexts import (
+from .model_factory import ModelFactory
+from .prompts import (
     ACTION_ITEMS_CONTEXT,
     ACTION_ITEMS_PROMPT,
     GOOGLE_AGENT_CONTEXT,
@@ -11,7 +12,6 @@ from .agents_contexts import (
     REVIEW_CONTEXT,
     REVIEWER_PROMPT,
 )
-from .model_factory import ModelFactory
 from .read_config import ConfigReader
 
 __all__ = [
