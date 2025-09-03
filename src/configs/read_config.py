@@ -12,6 +12,7 @@ class ConfigSchema(BaseModel):
 
     llm: str = "Gemini"
     model: str = "gemini-2.0-flash"
+    verify_ssl: bool = True
     max_document_length: int = 2000
     api_key: str | None = None
     additional_model_parameter: Dict[str, Any] = {}

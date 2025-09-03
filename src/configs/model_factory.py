@@ -6,8 +6,13 @@ import os
 
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.llms.openai import OpenAI
+from llama_index.llms.openai_like import OpenAILike
 
-SUPPORTED_LLMS = {"OpenAI": OpenAI, "Gemini": GoogleGenAI}
+SUPPORTED_LLMS = {
+    "OpenAI": OpenAI,
+    "Gemini": GoogleGenAI,
+    "OpenAILike": OpenAILike,
+}
 
 
 class LlmNotSupported(Exception):
@@ -34,6 +39,16 @@ class ModelFactory:
                 "Api key is not set please set it in config "
                 "file or using MODEL_API_KEY environment "
                 "variable"
+            )
+
+        if not config.verify_ssl:
+            import httpx
+
+            config.additional_model_parameter["http_client"] = httpx.Client(
+                verify=False
+            )
+            config.additional_model_parameter["async_http_client"] = (
+                httpx.AsyncClient(verify=False)
             )
 
         llm_object = SUPPORTED_LLMS.get(config.llm)
