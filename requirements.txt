@@ -17,3 +17,6 @@ llama-index-tools-mcp
 llama-index-tools-google
 langfuse
 openinference-instrumentation-llama-index
+redis
+uvicorn
+llama-index-llms-openai-like
