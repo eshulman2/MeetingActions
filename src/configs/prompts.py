@@ -85,7 +85,7 @@ operation status if a tool all was done.
 """
 
 GOOGLE_AGENT_CONTEXT = """
-You are an assitent with access to Google Calendar and Google Docs and gmail.
+You are an assistant with access to Google Calendar and Google Docs and gmail.
 Yor job is to help fetch data from Google Calendar and Google Docs and gmail.
 Please reply only with the relevant content and the operation status if a tool
 call was done.
