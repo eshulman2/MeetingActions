@@ -6,9 +6,11 @@ but I'm here to practice so, so be it
 import json
 import re
 from typing import Any, Dict
+from uuid import uuid4
 
 import nest_asyncio
 from fastapi import FastAPI, HTTPException
+from langfuse import get_client as get_langfuse_client
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.memory import Memory
 from llama_index.core.workflow import (
@@ -34,6 +36,7 @@ from src.configs import (
 from src.configs.logging_config import get_logger
 
 logger = get_logger("workflows.action_items_workflow")
+langfuse_client = get_langfuse_client()
 
 nest_asyncio.apply()
 
@@ -301,7 +304,20 @@ async def create_action_items_endpoint(request: MeetingNotes):
         workflow = ActionItemsWorkflow(
             timeout=30, verbose=True, max_iterations=20
         )
-        res = await workflow.run(meeting_notes=request.meeting_notes)
+        session_id = f"action-items-workflow-{str(uuid4())}"
+        with langfuse_client.start_as_current_span(name=session_id) as span:
+
+            res = await workflow.run(meeting_notes=request.meeting_notes)
+
+            span.update_trace(
+                session_id=session_id,
+                input=ACTION_ITEMS_PROMPT.format(
+                    meeting_notes=request.meeting_notes
+                ),
+                output=str(res),
+            )
+        langfuse_client.flush()
+
         logger.info("Action items workflow completed successfully")
         return ActionItemsResponse(action_items=res)
     except Exception as e:

@@ -3,10 +3,13 @@ This module is an agent with a simple API server for getting
 action items from meeting summaries.
 """
 
+from uuid import uuid4
+
 import nest_asyncio
 from fastapi import HTTPException
+from langfuse import get_client as get_langfuse_client
 from llama_index.core.agent.workflow import ReActAgent
-from llama_index.core.llms import ChatMessage
+from llama_index.core.memory import Memory
 from pydantic import BaseModel, Field
 
 from src import config
@@ -21,6 +24,7 @@ from src.llamaindex.utils import safe_load_mcp_tools
 from src.tools.general_tools import DateToolsSpecs
 
 logger = get_logger("agents.google")
+langfuse_client = get_langfuse_client()
 
 nest_asyncio.apply()
 
@@ -28,7 +32,9 @@ nest_asyncio.apply()
 class AgentResponseFormat(BaseModel):
     """test format for meeting note endpoint reply"""
 
-    content: str = Field(description="the agent message", default=None)
+    response: str = Field(
+        description="Response if an error occurred describe it"
+    )
     error: bool = Field(
         description="field indicating on rather or not an error occurred"
     )
@@ -46,19 +52,16 @@ class GoogleAgentServer(BaseAgentServer):
         logger.debug(f"Loaded {len(tools)} tools for Google agent")
 
         google_agent = ReActAgent(
+            name="google-agent",
             tools=tools,
             llm=llm.llm,
+            system_prompt=GOOGLE_AGENT_CONTEXT,
             output_cls=AgentResponseFormat,
             **config.config.agent_config,
         )
         logger.info("Google agent created successfully")
 
         return google_agent
-
-    def get_agent_context(self) -> str:
-        """Return the action item agent context."""
-        logger.debug("Retrieving Google agent context")
-        return GOOGLE_AGENT_CONTEXT
 
     def additional_routes(self):
         @self.app.get("/meeting-notes")
@@ -68,15 +71,35 @@ class GoogleAgentServer(BaseAgentServer):
                 f"Processing meeting notes request for date: {date}, meeting: {meeting}"
             )
             try:
-                agent_context = ChatMessage(
-                    role="system", content=self.get_agent_context()
-                )
+                session_id = f"meeting-notes-{str(uuid4())}"
+                mem = Memory.from_defaults(session_id=session_id)
 
-                agent_response = await self.agent.run(
-                    GOOGLE_MEETING_NOTES.format(date=date, meeting=meeting),
-                    chat_history=[agent_context],
-                    ctx=self.ctx,
-                )
+                with langfuse_client.start_as_current_span(
+                    name=session_id
+                ) as span:
+
+                    agent_response = await self.agent.run(
+                        GOOGLE_MEETING_NOTES.format(
+                            date=date, meeting=meeting
+                        ),
+                        ctx=self.ctx,
+                        memory=mem,
+                    )
+
+                    span.update_trace(
+                        session_id=session_id,
+                        input=GOOGLE_MEETING_NOTES.format(
+                            date=date, meeting=meeting
+                        ),
+                        output=str(
+                            getattr(
+                                agent_response,
+                                "structured_response",
+                                agent_response,
+                            )
+                        ),
+                    )
+                langfuse_client.flush()
 
                 logger.info("Meeting notes request processed successfully")
                 return agent_response.structured_response

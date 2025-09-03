@@ -36,16 +36,15 @@ class JiraAgentServer(BaseAgentServer):
         logger.debug(f"Loaded {len(tools)} tools for Jira agent")
 
         jira_agent = ReActAgent(
-            tools=tools, llm=llm.llm, **config.config.agent_config
+            name="jira-agent",
+            tools=tools,
+            system_prompt=JIRA_AGENT_CONTEXT,
+            llm=llm.llm,
+            **config.config.agent_config,
         )
         logger.info("Jira agent created successfully")
 
         return jira_agent
-
-    def get_agent_context(self) -> str:
-        """Return the Jira agent context."""
-        logger.debug("Retrieving Jira agent context")
-        return JIRA_AGENT_CONTEXT
 
     def additional_routes(self):
         logger.debug("No additional routes defined for Jira agent")
