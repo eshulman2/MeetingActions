@@ -33,7 +33,6 @@ Generate a single, valid JSON object. The root of the object should have one key
 * `actionDescription`: (string) A clear description of the task.
 * `assignedTo`: (string) The name of the person responsible.
 * `dueDate`: (string) The specified deadline.
-* `requiredTool`: (string) The specific tool or platform needed.
 * `context`: (string) Any additional notes or clarifying details.
 
 Ensure the entire output is enclosed in a single JSON code block.
@@ -49,21 +48,18 @@ Ensure the entire output is enclosed in a single JSON code block.
       "actionDescription": "Draft the Q3 marketing brief",
       "assignedTo": "Alex",
       "dueDate": "Next Wednesday",
-      "requiredTool": "Google Docs",
       "context": "Must use the new template."
     },
     {
       "actionDescription": "Create a Jira ticket for the login bug",
       "assignedTo": "Maria",
       "dueDate": "TBD",
-      "requiredTool": "Jira",
       "context": "The ticket should be set to P1 priority."
     },
     {
       "actionDescription": "Prepare visuals for client presentation",
       "assignedTo": "Kenji",
       "dueDate": "Friday",
-      "requiredTool": "Figma",
       "context": "For the internal review."
     }
   ]
@@ -142,5 +138,46 @@ This caused the JSON decode error: {error}
 
 Try again, the response must contain only valid JSON code. Do not add any sentence before or after the JSON object.
 Do not repeat the schema.
+"""
+)
+
+TOOL_DISPATCHER_CONTEXT = """You are an AI-powered Action Item Dispatcher. Your sole purpose is to receive a JSON object describing a task (an "action item") and a JSON array of available agents, and then to route the action item to the most suitable agent.
+
+### Your Core Directives:
+
+1.  **Purpose-Driven Analysis:** You must analyze the content and metadata of the `action_item` to understand its core requirement. You will then analyze the `agents_list`, paying close attention to the `description` field for each agent to understand their specific capabilities.
+2.  **Strict Matching Logic:** Your decision must be based on a logical and direct match between the action item's needs and an agent's described function. Do not infer capabilities that are not explicitly stated.
+3.  **Concise and Exact Output:** Your entire response must consist of a single string.
+    * If a clear match is found, respond with that agent's unique `name`.
+    * **Fallback Response:** If no agent is a clear match, or if the request is ambiguous, you are required to respond with the default fallback value: the exact string `UNASSIGNED_AGENT`.
+4.  **No Conversational Output:** You are a silent, efficient engine. Do not provide explanations, apologies, greetings, or any text other than the required output string. You will not ask clarifying questions. You will simply process the input and provide the route.
+"""
+
+TOOL_DISPATCHER_PROMPT = PromptTemplate(
+    """
+Your task is to function as a routing engine. Analyze the action item and the list of available agents to determine the single most appropriate agent to handle the task.
+
+### Instructions:
+1.  **Analyze the Action Item:** Carefully examine the `action_item` JSON to understand its intent, context, and the specific task required.
+2.  **Review Agent Capabilities:** Evaluate the `agents_list`. Each agent has a `name` and a `description` of their function and expertise.
+3.  **Select the Best Match:** Cross-reference the action item's requirements with the agents' descriptions. Select the agent whose function is the most direct and logical match.
+
+### Input Data:
+
+**--- ACTION ITEM START ---**
+{action_item}
+**--- ACTION ITEM END ---**
+**--- AGENT LIST START ---**
+{agents_list}
+**--- AGENT LIST END ---**
+"""
+)
+
+AGENT_QUERY_PROMPT = PromptTemplate(
+    """
+Using the context and fields in the following json please preform the required actions:
+**--- JSON START ---**
+{action_item}
+**--- JSON END ---**
 """
 )

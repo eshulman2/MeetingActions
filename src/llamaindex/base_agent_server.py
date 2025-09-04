@@ -49,6 +49,10 @@ class BaseAgentServer(ABC):
     def _setup_routes(self):
         """Setup common routes for all agent servers."""
 
+        @self.app.get("/description")
+        async def description_endpoint():
+            return self.app.description
+
         @self.app.post("/test", response_model=ChatResponse)
         async def test_endpoint(request: ChatQuery):
             """Test endpoint with no additional context."""

@@ -38,6 +38,9 @@ class AgentResponseFormat(BaseModel):
     error: bool = Field(
         description="field indicating on rather or not an error occurred"
     )
+    additional_info: str | None = Field(
+        description="ask for additional info if needed", default=None
+    )
 
 
 class GoogleAgentServer(BaseAgentServer):
@@ -64,11 +67,13 @@ class GoogleAgentServer(BaseAgentServer):
         return google_agent
 
     def additional_routes(self):
+
         @self.app.get("/meeting-notes")
         async def meeting_notes(date: str, meeting: str):
             """Main agent endpoint with context."""
             logger.info(
-                f"Processing meeting notes request for date: {date}, meeting: {meeting}"
+                f"Processing meeting notes request for date: {date}, meeting: "
+                f"{meeting}"
             )
             try:
                 session_id = f"meeting-notes-{str(uuid4())}"
@@ -116,8 +121,12 @@ logger.info("Initializing Google agent server")
 server = GoogleAgentServer(
     llm=ModelFactory(config.config),
     title="Google Agent",
-    description="An API to expose a LlamaIndex \
-        ReActAgent for Google api access.",
+    description=(
+        "An API to expose a LlamaIndex "
+        "ReActAgent for Google api access. This agent is useful for "
+        "interacting with gmail for sending emails, google calendar "
+        "and google docs"
+    ),
 )
 app = server.app
 logger.info("Google agent server initialized successfully")

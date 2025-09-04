@@ -6,9 +6,11 @@ but I'm here to practice so, so be it
 import json
 import re
 from typing import Any, Dict
+from urllib.parse import urlencode
 from uuid import uuid4
 
 import nest_asyncio
+import requests
 from fastapi import FastAPI, HTTPException
 from langfuse import get_client as get_langfuse_client
 from llama_index.core.llms import ChatMessage, MessageRole
@@ -27,10 +29,13 @@ from src import config
 from src.configs import (
     ACTION_ITEMS_CONTEXT,
     ACTION_ITEMS_PROMPT,
+    AGENT_QUERY_PROMPT,
     JSON_REFLECTION_PROMPT,
     REFLECTION_PROMPT,
     REVIEW_CONTEXT,
     REVIEWER_PROMPT,
+    TOOL_DISPATCHER_CONTEXT,
+    TOOL_DISPATCHER_PROMPT,
     ModelFactory,
 )
 from src.configs.logging_config import get_logger
@@ -41,6 +46,10 @@ langfuse_client = get_langfuse_client()
 nest_asyncio.apply()
 
 llm = ModelFactory(config.config)
+
+
+class MeetingNotesEvent(Event):
+    meeting_notes: str
 
 
 class ReviewErrorEvent(Event):
@@ -62,6 +71,7 @@ class ActionItemsDone(Event):
         action_items: The generated action items content
     """
 
+    meeting_notes: str
     action_items: str
 
 
@@ -85,6 +95,25 @@ class JsonCheckError(Event):
 
     wrong_answer: str
     error: Any
+
+
+class ToolRouter(Event):
+    action_items: Dict
+
+
+class DispatchToAgent(Event):
+    agent: str
+    action_item: Dict
+
+
+class NoActionCall(Event):
+    action_item: Dict
+
+
+class ToolResult(Event):
+    action_item: Dict
+    response: str
+    error: bool
 
 
 class ActionItemsWorkflow(Workflow):
@@ -117,17 +146,48 @@ class ActionItemsWorkflow(Workflow):
         super().__init__(*args, **kwargs)
         # Store input into instance variables
         self.max_retries = max_iterations
-        self.meeting_notes = None
         self.memory = Memory.from_defaults(
             session_id="my_session", token_limit=40000
         )
         logger.debug("ActionItemsWorkflow initialized successfully")
 
     @step
+    async def get_meeting_notes(
+        self, ctx: Context, event: StartEvent
+    ) -> MeetingNotesEvent | StopEvent:
+        logger.info(
+            f"Getting meeting notes for meeting: {event['meeting']}, "
+            f"date: {event['date']}"
+        )
+        encoded_url = urlencode(
+            {"meeting": event["meeting"], "date": event["date"]}
+        )
+        try:
+            response = requests.get(
+                f"{config.config.meeting_notes_endpoint}?{encoded_url}"
+            )
+            response.raise_for_status()
+            logger.debug("Successfully retrieved meeting notes from API")
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                f"An error occurred while fetching meeting notes: {e}"
+            )
+            raise requests.exceptions.RequestException from e
+
+        response_json = response.json()
+        logger.info("Meeting notes retrieved and parsed successfully")
+        logger.debug(f"Received the following meeting notes:\n{response_json}")
+
+        if response_json["error"]:
+            return StopEvent("oh no an error occurred")
+
+        return MeetingNotesEvent(meeting_notes=response_json["response"])
+
+    @step
     async def create_action_items(
         self,
         ctx: Context,
-        event: StartEvent | ReviewErrorEvent | JsonCheckError,
+        event: MeetingNotesEvent | ReviewErrorEvent | JsonCheckError,
     ) -> StopEvent | ActionItemsDone:
         """Create or refine action items based on meeting notes and feedback.
 
@@ -141,7 +201,8 @@ class ActionItemsWorkflow(Workflow):
         """
         current_retries = await ctx.store.get("retries", default=0)
         logger.debug(
-            f"Creating action items, attempt {current_retries + 1}/{self.max_retries}"
+            "Creating action items, attempt "
+            f"{current_retries + 1}/{self.max_retries}"
         )
 
         if current_retries >= self.max_retries:
@@ -149,9 +210,8 @@ class ActionItemsWorkflow(Workflow):
             return StopEvent(result="Max retries reached", error=True)
         await ctx.store.set("retries", current_retries + 1)
 
-        if isinstance(event, StartEvent):
-            self.meeting_notes = event.get("meeting_notes")
-            if not self.meeting_notes:
+        if isinstance(event, MeetingNotesEvent):
+            if not event.meeting_notes:
                 logger.error("No meeting notes provided as input")
                 return StopEvent(result="no input was provided", error=True)
             logger.info("Starting action items creation from meeting notes")
@@ -164,7 +224,7 @@ class ActionItemsWorkflow(Workflow):
                     ChatMessage(
                         role=MessageRole.USER,
                         content=ACTION_ITEMS_PROMPT.format(
-                            meeting_notes=self.meeting_notes
+                            meeting_notes=event.meeting_notes
                         ),
                     ),
                 ]
@@ -207,7 +267,9 @@ class ActionItemsWorkflow(Workflow):
         )
 
         logger.info("Action items created successfully")
-        return ActionItemsDone(action_items=str(output))
+        return ActionItemsDone(
+            action_items=str(output), meeting_notes=event.meeting_notes
+        )
 
     @step
     async def review(
@@ -231,7 +293,7 @@ class ActionItemsWorkflow(Workflow):
                     role=MessageRole.USER,
                     content=REVIEWER_PROMPT.format(
                         action_items=event.action_items,
-                        meeting_notes=self.meeting_notes,
+                        meeting_notes=event.meeting_notes,
                     ),
                 ),
             ]
@@ -247,7 +309,7 @@ class ActionItemsWorkflow(Workflow):
     @step
     async def json_check(
         self, event: JsonCheckEvent
-    ) -> StopEvent | JsonCheckError:
+    ) -> ToolRouter | JsonCheckError:
         """Validate that action items are in proper JSON format.
 
         Args:
@@ -268,16 +330,108 @@ class ActionItemsWorkflow(Workflow):
                 )
             j = json.loads(match.group(0))
             logger.info("JSON validation successful")
-            return StopEvent(result=j)
+            return ToolRouter(action_items=j)
         except json.JSONDecodeError as err:
             logger.error(f"JSON validation failed: {err}")
             return JsonCheckError(wrong_answer=event.action_items, error=err)
 
+    @step
+    async def tool_router(
+        self, ctx: Context, event: ToolRouter
+    ) -> DispatchToAgent | None:
+        agent_list = []
+        for agent, url in config.config.agents.items():
+            try:
+                logger.debug(f"Fetching {agent} agent description")
+                res = requests.get(f"{url}/description")
+                res.raise_for_status()
+                agent_list.append(f"{agent}: {res.content.decode('utf-8')}")
+            except requests.exceptions.RequestException as e:
+                logger.error(
+                    f"Unable to load {agent} agent description "
+                    f"with the following exception: {e}"
+                )
 
-class MeetingNotes(BaseModel):
+        tool_calls = 0
+        for action_item in event.action_items["action_items"]:
+            try:
+                res = await llm.llm.achat(
+                    [
+                        ChatMessage(
+                            role=MessageRole.SYSTEM,
+                            content=TOOL_DISPATCHER_CONTEXT,
+                        ),
+                        ChatMessage(
+                            role=MessageRole.USER,
+                            content=TOOL_DISPATCHER_PROMPT.format(
+                                action_item=action_item,
+                                agents_list="\n".join(agent_list),
+                            ),
+                        ),
+                    ]
+                )
+                logger.info("Dispatching action item: "
+                            f"{action_item["description"]} "
+                            f"to agent {str(res)}")
+                ctx.send_event(
+                    DispatchToAgent(agent=str(res), action_item=action_item)
+                )
+                tool_calls += 1
+            except Exception as e:
+                logger.error(e)
+
+        ctx.store.set("tool_calls", tool_calls)
+
+    @step
+    async def dispatch_to_agent(
+        self, ctx: Context, event: DispatchToAgent
+    ) -> ToolResult:
+        if event.agent == "UNASSIGNED_AGENT":
+            return ToolResult(
+                action_item=event.action_item["description"],
+                response="No suitable agent found to preform this action item",
+                error=False,
+            )
+        try:
+            res = requests.post(
+                f"{config.config.agents}/agent",
+                json={"query": AGENT_QUERY_PROMPT.format(event.action_item)},
+            )
+            logger.debug(res.json())
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                f"An error occurred while calling {event.agent} agent: {e}"
+            )
+            return ToolResult(
+                action_item=event.action_item["description"],
+                response=f"An error occurred while calling {event.agent} agent: {e}",
+                error=True,
+            )
+
+        return ToolResult(
+            action_item=event.action_item["description"],
+            response=res.json(),
+            error=False,
+        )
+
+    @step
+    async def collect_tool_results(
+        self, ctx: Context, event: ToolResult
+    ) -> StopEvent | None:
+        tool_calls = ctx.store.get("tool_calls")
+        result = ctx.collect_events(event, [ToolResult] * tool_calls)
+        if result is None:
+            return None
+
+        print(result)
+        return StopEvent(result="Done")
+
+
+class Meeting(BaseModel):
     """The request model for a user's query."""
 
-    meeting_notes: str
+    meeting: str
+    date: str
 
 
 class ActionItemsResponse(BaseModel):
@@ -294,10 +448,10 @@ app = FastAPI(
 
 
 @app.post("/action-items", response_model=ActionItemsResponse)
-async def create_action_items_endpoint(request: MeetingNotes):
+async def create_action_items_endpoint(request: Meeting):
     """Action items workflow"""
     logger.info(
-        f"Processing action items request with {len(request.meeting_notes)} "
+        f"Processing action items request with {len(request.meeting)} "
         "characters of meeting notes"
     )
     try:
@@ -307,13 +461,13 @@ async def create_action_items_endpoint(request: MeetingNotes):
         session_id = f"action-items-workflow-{str(uuid4())}"
         with langfuse_client.start_as_current_span(name=session_id) as span:
 
-            res = await workflow.run(meeting_notes=request.meeting_notes)
+            res = await workflow.run(
+                meeting=request.meeting, date=request.date
+            )
 
             span.update_trace(
                 session_id=session_id,
-                input=ACTION_ITEMS_PROMPT.format(
-                    meeting_notes=request.meeting_notes
-                ),
+                input=f"meeting: {request.meeting}, date: {request.date}",
                 output=str(res),
             )
         langfuse_client.flush()

@@ -55,7 +55,11 @@ logger.info("Initializing Jira agent server")
 server = JiraAgentServer(
     llm=ModelFactory(config.config),
     title="Jira Agent",
-    description="An API to expose a LlamaIndex ReActAgent for Jira operations.",
+    description=(
+        "An API to expose a LlamaIndex ReActAgent for Jira "
+        "operations. This is useful for Creating, updating and "
+        "managing jira tickets"
+    ),
 )
 app = server.app
 logger.info("Jira agent server initialized successfully")

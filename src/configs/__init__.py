@@ -4,6 +4,7 @@ from .model_factory import ModelFactory
 from .prompts import (
     ACTION_ITEMS_CONTEXT,
     ACTION_ITEMS_PROMPT,
+    AGENT_QUERY_PROMPT,
     GOOGLE_AGENT_CONTEXT,
     GOOGLE_MEETING_NOTES,
     JIRA_AGENT_CONTEXT,
@@ -11,6 +12,8 @@ from .prompts import (
     REFLECTION_PROMPT,
     REVIEW_CONTEXT,
     REVIEWER_PROMPT,
+    TOOL_DISPATCHER_CONTEXT,
+    TOOL_DISPATCHER_PROMPT,
 )
 from .read_config import ConfigReader
 
@@ -26,4 +29,7 @@ __all__ = [
     "REFLECTION_PROMPT",
     "REVIEWER_PROMPT",
     "JSON_REFLECTION_PROMPT",
+    "TOOL_DISPATCHER_CONTEXT",
+    "TOOL_DISPATCHER_PROMPT",
+    "AGENT_QUERY_PROMPT",
 ]

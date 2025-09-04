@@ -21,6 +21,8 @@ class ConfigSchema(BaseModel):
     mcp_config: Dict[str, Any] = {}
     observability: Dict[str, Any] = {}
     cache_config: Dict[str, Any] = {}
+    meeting_notes_endpoint: str = "http://127.0.0.1:8000/meeting-notes"
+    agents: Dict[str, str]
 
 
 class ConfigReader:
