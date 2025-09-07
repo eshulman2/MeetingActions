@@ -5,3 +5,7 @@ __pycache__
 .vscode
 test.py
 logs
+.venv
+.mypy_cache
+.claude
+TODO
