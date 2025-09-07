@@ -4,7 +4,7 @@ from fastmcp import FastMCP
 from llama_index.tools.google import GmailToolSpec
 
 from src import config
-from src.tools.google_tools import GoogleToolSpec
+from src.integrations.google_tools import GoogleToolSpec
 
 tools = GmailToolSpec().to_tool_list() + GoogleToolSpec().to_tool_list()
 

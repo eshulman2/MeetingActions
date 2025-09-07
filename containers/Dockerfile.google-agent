@@ -24,10 +24,10 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose port for agent servers
-EXPOSE 8001
+EXPOSE 8000
 
 # Set Python path
 ENV PYTHONPATH=/app
 
 # Default command (can be overridden)
-CMD ["uvicorn", "src.llamaindex.agents.jira_agent:app", "--host", "0.0.0.0"]
+CMD ["uvicorn", "src.core.agents.google_agent:app", "--host", "0.0.0.0"]

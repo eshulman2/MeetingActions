@@ -17,7 +17,7 @@ services:
     image: jira-agent
     build:
       context: .
-      dockerfile: containers/Dockerfile.llamaindex-jira-agent
+      dockerfile: containers/Dockerfile.jira-agent
     user: "1000:1000"
     ports:
       - "8000:8000"
@@ -35,7 +35,7 @@ services:
     image: google-agent
     build:
       context: .
-      dockerfile: containers/Dockerfile.llamaindex-google-agent
+      dockerfile: containers/Dockerfile.google-agent
     user: "1000:1000"
     ports:
       - "8001:8000"

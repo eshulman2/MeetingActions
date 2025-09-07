@@ -6,7 +6,7 @@ from jira import JIRA, JIRAError
 from jira.resources import Issue
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
-from src.configs.logging_config import get_logger
+from src.infrastructure.logging.logging_config import get_logger
 
 from .jira_formatter import JiraFormatter
 

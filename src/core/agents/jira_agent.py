@@ -8,12 +8,12 @@ import nest_asyncio
 from llama_index.core.agent.workflow import ReActAgent
 
 from src import config
-from src.configs import JIRA_AGENT_CONTEXT, ModelFactory
-from src.configs.logging_config import get_logger
-from src.llamaindex.base_agent_server import BaseAgentServer
-from src.llamaindex.utils import safe_load_mcp_tools
-from src.tools.general_tools import DateToolsSpecs
-from src.tools.jira_tools import JiraToolSpec
+from src.core.agent_utils import safe_load_mcp_tools
+from src.core.base.base_agent_server import BaseAgentServer
+from src.infrastructure.config import JIRA_AGENT_CONTEXT, ModelFactory
+from src.infrastructure.logging.logging_config import get_logger
+from src.integrations.general_tools import DateToolsSpecs
+from src.integrations.jira_tools import JiraToolSpec
 
 logger = get_logger("agents.jira")
 

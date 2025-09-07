@@ -9,7 +9,7 @@ import redis
 from redis.exceptions import ConnectionError, RedisError
 
 from src import config
-from src.configs.logging_config import get_logger
+from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("redis_cache")
 

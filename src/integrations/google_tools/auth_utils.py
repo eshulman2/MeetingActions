@@ -7,7 +7,7 @@ from google.oauth2.credentials import Credentials
 from google.oauth2.service_account import Credentials as SACred
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-from src.configs.logging_config import get_logger
+from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("google_tools.utils")
 

@@ -4,7 +4,7 @@ import asyncio
 
 from llama_index.tools.mcp import aget_tools_from_mcp_url
 
-from src.configs.logging_config import get_logger
+from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("utils")
 

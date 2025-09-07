@@ -3,7 +3,7 @@
 from langfuse import Langfuse
 from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
 
-from src.configs.logging_config import get_logger
+from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("configs.observability")
 _langfuse_enabled = False

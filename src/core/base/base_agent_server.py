@@ -12,7 +12,7 @@ from llama_index.core.memory import Memory
 from llama_index.core.workflow import Context
 from pydantic import BaseModel
 
-from src.configs.logging_config import get_logger
+from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("agents.base")
 langfuse_client = get_langfuse_client()

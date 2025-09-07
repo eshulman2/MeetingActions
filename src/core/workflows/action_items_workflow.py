@@ -26,7 +26,7 @@ from llama_index.core.workflow import (
 from pydantic import BaseModel
 
 from src import config
-from src.configs import (
+from src.infrastructure.config import (
     ACTION_ITEMS_CONTEXT,
     ACTION_ITEMS_PROMPT,
     AGENT_QUERY_PROMPT,
@@ -38,7 +38,7 @@ from src.configs import (
     TOOL_DISPATCHER_PROMPT,
     ModelFactory,
 )
-from src.configs.logging_config import get_logger
+from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("workflows.action_items_workflow")
 langfuse_client = get_langfuse_client()
