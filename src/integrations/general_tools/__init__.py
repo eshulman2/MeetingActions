@@ -2,6 +2,6 @@
 Init for general specs
 """
 
-from .date_tools import DateToolsSpecs
+from src.integrations.general_tools.date_tools import DateToolsSpecs
 
 __all__ = ["DateToolsSpecs"]

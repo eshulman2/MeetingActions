@@ -2,6 +2,6 @@
 Initialize Google tools specs
 """
 
-from .google_tools import GoogleToolSpec
+from src.integrations.google_tools.google_tools import GoogleToolSpec
 
 __all__ = ["GoogleToolSpec"]

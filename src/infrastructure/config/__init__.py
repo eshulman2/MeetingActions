@@ -1,7 +1,7 @@
 """init for configs package"""
 
-from .model_factory import ModelFactory
-from .prompts import (
+from src.infrastructure.config.model_factory import ModelFactory
+from src.infrastructure.config.prompts import (
     ACTION_ITEMS_CONTEXT,
     ACTION_ITEMS_PROMPT,
     AGENT_QUERY_PROMPT,
@@ -15,7 +15,7 @@ from .prompts import (
     TOOL_DISPATCHER_CONTEXT,
     TOOL_DISPATCHER_PROMPT,
 )
-from .read_config import ConfigReader
+from src.infrastructure.config.read_config import ConfigReader
 
 __all__ = [
     "ModelFactory",

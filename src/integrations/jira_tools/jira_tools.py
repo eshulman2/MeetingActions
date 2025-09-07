@@ -7,8 +7,7 @@ from jira.resources import Issue
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
 from src.infrastructure.logging.logging_config import get_logger
-
-from .jira_formatter import JiraFormatter
+from src.integrations.jira_tools.jira_formatter import JiraFormatter
 
 
 class JiraToolSpec(BaseToolSpec):

@@ -11,8 +11,7 @@ from llama_index.core.tools.tool_spec.base import BaseToolSpec
 from src import config
 from src.infrastructure.cache.redis_cache import get_cache
 from src.infrastructure.logging.logging_config import get_logger
-
-from .auth_utils import authenticate
+from src.integrations.google_tools.auth_utils import authenticate
 
 logger = get_logger("google_tools.calendar")
 
