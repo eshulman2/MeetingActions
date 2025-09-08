@@ -30,4 +30,4 @@ EXPOSE 8002
 ENV PYTHONPATH=/app
 
 # Default command for workflows
-CMD ["uvicorn", "src.core.workflows.action_items_workflow:app", "--host", "0.0.0.0", "--loop", "asyncio"]
+CMD ["uvicorn", "src.core.workflow_servers.action_items_server:app", "--host", "0.0.0.0", "--loop", "asyncio"]

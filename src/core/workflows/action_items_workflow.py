@@ -13,11 +13,9 @@ import json
 import re
 from typing import Any, Dict
 from urllib.parse import urlencode
-from uuid import uuid4
 
 import nest_asyncio
 import requests
-from fastapi import FastAPI, HTTPException
 from langfuse import get_client as get_langfuse_client
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.memory import Memory
@@ -29,7 +27,6 @@ from llama_index.core.workflow import (
     Workflow,
     step,
 )
-from pydantic import BaseModel
 
 from src import config
 from src.infrastructure.config import (
@@ -42,7 +39,6 @@ from src.infrastructure.config import (
     REVIEWER_PROMPT,
     TOOL_DISPATCHER_CONTEXT,
     TOOL_DISPATCHER_PROMPT,
-    get_model,
 )
 from src.infrastructure.logging.logging_config import get_logger
 
@@ -518,83 +514,3 @@ class ActionItemsWorkflow(Workflow):
 
         print(result)
         return StopEvent(result="Done")
-
-
-class Meeting(BaseModel):
-    """Request model for meeting information.
-
-    Attributes:
-        meeting: Name or identifier of the meeting
-        date: Date of the meeting in string format
-    """
-
-    meeting: str
-    date: str
-
-
-class ActionItemsResponse(BaseModel):
-    """Response model for workflow output.
-
-    Attributes:
-        action_items: Dictionary containing structured action items
-    """
-
-    action_items: Dict
-
-
-app = FastAPI(
-    title="Work item workflow",
-    description="Work item workflow endpoints",
-    version="1.0.0",
-)
-
-
-@app.post("/action-items", response_model=ActionItemsResponse)
-async def create_action_items_endpoint(request: Meeting):
-    """FastAPI endpoint for processing meeting notes into action items.
-
-    This endpoint initializes and runs the ActionItemsWorkflow to process
-    meeting information and generate structured action items with full
-    observability tracking via Langfuse.
-
-    Args:
-        request: Meeting request containing meeting name and date
-
-    Returns:
-        ActionItemsResponse with generated action items
-
-    Raises:
-        HTTPException: If workflow execution fails
-    """
-    logger.info(
-        f"Processing action items request with {len(request.meeting)} "
-        "characters of meeting notes"
-    )
-    try:
-        workflow = ActionItemsWorkflow(
-            llm=get_model(config.config),
-            timeout=30,
-            verbose=True,
-            max_iterations=20,
-        )
-        session_id = f"action-items-workflow-{str(uuid4())}"
-        with langfuse_client.start_as_current_span(name=session_id) as span:
-
-            res = await workflow.run(
-                meeting=request.meeting, date=request.date
-            )
-
-            span.update_trace(
-                session_id=session_id,
-                input=f"meeting: {request.meeting}, date: {request.date}",
-                output=str(res),
-            )
-        langfuse_client.flush()
-
-        logger.info("Action items workflow completed successfully")
-        return ActionItemsResponse(action_items=res)
-    except Exception as e:
-        logger.error(f"Error processing action items request: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Error processing request: {e}"
-        ) from e

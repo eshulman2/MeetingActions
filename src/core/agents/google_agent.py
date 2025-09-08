@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from src import config
 from src.core.agent_utils import safe_load_mcp_tools
-from src.core.base.base_agent_server import BaseAgentServer
+from src.core.base.base_agent_server import BaseServer
 from src.infrastructure.config import (
     GOOGLE_AGENT_CONTEXT,
     GOOGLE_MEETING_NOTES,
@@ -43,10 +43,10 @@ class AgentResponseFormat(BaseModel):
     )
 
 
-class GoogleAgentServer(BaseAgentServer):
-    """Action item agent server implementation."""
+class GoogleAgentServer(BaseServer):
+    """Google agent server implementation."""
 
-    def create_agent(self, llm):
+    def create_service(self, llm):
         """Return agent"""
         logger.info("Creating Google agent with tools")
         tools = DateToolsSpecs().to_tool_list() + safe_load_mcp_tools(
@@ -83,7 +83,7 @@ class GoogleAgentServer(BaseAgentServer):
                     name=session_id
                 ) as span:
 
-                    agent_response = await self.agent.run(
+                    agent_response = await self.service.run(
                         GOOGLE_MEETING_NOTES.format(
                             date=date, meeting=meeting
                         ),

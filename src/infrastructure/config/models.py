@@ -26,7 +26,7 @@ class LlmNotSupported(Exception):
         )
 
 
-def get_model(config):
+def get_model(config) -> OpenAI | GoogleGenAI | OpenAILike:
     # pylint: disable=consider-iterating-dictionary
     if config.llm not in SUPPORTED_LLMS.keys():
         raise LlmNotSupported
