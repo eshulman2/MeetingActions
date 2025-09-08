@@ -42,7 +42,7 @@ from src.infrastructure.config import (
     REVIEWER_PROMPT,
     TOOL_DISPATCHER_CONTEXT,
     TOOL_DISPATCHER_PROMPT,
-    ModelFactory,
+    get_model,
 )
 from src.infrastructure.logging.logging_config import get_logger
 
@@ -50,8 +50,6 @@ logger = get_logger("workflows.action_items_workflow")
 langfuse_client = get_langfuse_client()
 
 nest_asyncio.apply()
-
-llm = ModelFactory(config.config)
 
 
 class MeetingNotesEvent(Event):
@@ -164,6 +162,7 @@ class ActionItemsWorkflow(Workflow):
 
     def __init__(
         self,
+        llm,
         *args: Any,
         max_iterations: int,  # Pass custom parameters too.
         **kwargs: Any,
@@ -188,6 +187,7 @@ class ActionItemsWorkflow(Workflow):
         self.memory = Memory.from_defaults(
             session_id="my_session", token_limit=40000
         )
+        self.llm = llm
         logger.debug("ActionItemsWorkflow initialized successfully")
 
     @step
@@ -300,7 +300,7 @@ class ActionItemsWorkflow(Workflow):
 
         elif isinstance(event, JsonCheckError):
             logger.info("Fixing JSON formatting issues in action items")
-            output = await llm.llm.achat(
+            output = await self.llm.achat(
                 [
                     ChatMessage(
                         role=MessageRole.USER,
@@ -314,7 +314,7 @@ class ActionItemsWorkflow(Workflow):
             print(output)
             return JsonCheckEvent(action_items=str(output))
 
-        output = await llm.llm.achat(self.memory.get())
+        output = await self.llm.achat(self.memory.get())
         logger.debug("LLM response generated for action items")
 
         self.memory.put(
@@ -341,7 +341,7 @@ class ActionItemsWorkflow(Workflow):
             ReviewErrorEvent if improvements are needed
         """
         logger.info("Reviewing generated action items for quality")
-        review = await llm.llm.achat(
+        review = await self.llm.achat(
             [
                 ChatMessage(role=MessageRole.SYSTEM, content=REVIEW_CONTEXT),
                 ChatMessage(
@@ -422,7 +422,7 @@ class ActionItemsWorkflow(Workflow):
         tool_calls = 0
         for action_item in event.action_items["action_items"]:
             try:
-                res = await llm.llm.achat(
+                res = await self.llm.achat(
                     [
                         ChatMessage(
                             role=MessageRole.SYSTEM,
@@ -572,7 +572,10 @@ async def create_action_items_endpoint(request: Meeting):
     )
     try:
         workflow = ActionItemsWorkflow(
-            timeout=30, verbose=True, max_iterations=20
+            llm=get_model(config.config),
+            timeout=30,
+            verbose=True,
+            max_iterations=20,
         )
         session_id = f"action-items-workflow-{str(uuid4())}"
         with langfuse_client.start_as_current_span(name=session_id) as span:

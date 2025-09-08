@@ -10,7 +10,7 @@ from llama_index.core.agent.workflow import ReActAgent
 from src import config
 from src.core.agent_utils import safe_load_mcp_tools
 from src.core.base.base_agent_server import BaseAgentServer
-from src.infrastructure.config import JIRA_AGENT_CONTEXT, ModelFactory
+from src.infrastructure.config import JIRA_AGENT_CONTEXT, get_model
 from src.infrastructure.logging.logging_config import get_logger
 from src.integrations.general_tools import DateToolsSpecs
 from src.integrations.jira_tools import JiraToolSpec
@@ -39,7 +39,7 @@ class JiraAgentServer(BaseAgentServer):
             name="jira-agent",
             tools=tools,
             system_prompt=JIRA_AGENT_CONTEXT,
-            llm=llm.llm,
+            llm=llm,
             **config.config.agent_config,
         )
         logger.info("Jira agent created successfully")
@@ -53,7 +53,7 @@ class JiraAgentServer(BaseAgentServer):
 # Initialize the server
 logger.info("Initializing Jira agent server")
 server = JiraAgentServer(
-    llm=ModelFactory(config.config),
+    llm=get_model(config.config),
     title="Jira Agent",
     description=(
         "An API to expose a LlamaIndex ReActAgent for Jira "

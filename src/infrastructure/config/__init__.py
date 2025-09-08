@@ -1,6 +1,6 @@
 """init for configs package"""
 
-from src.infrastructure.config.model_factory import ModelFactory
+from src.infrastructure.config.models import get_model
 from src.infrastructure.config.prompts import (
     ACTION_ITEMS_CONTEXT,
     ACTION_ITEMS_PROMPT,
@@ -18,7 +18,7 @@ from src.infrastructure.config.prompts import (
 from src.infrastructure.config.read_config import ConfigReader
 
 __all__ = [
-    "ModelFactory",
+    "get_model",
     "ConfigReader",
     "GOOGLE_AGENT_CONTEXT",
     "ACTION_ITEMS_CONTEXT",

@@ -18,7 +18,7 @@ from src.core.base.base_agent_server import BaseAgentServer
 from src.infrastructure.config import (
     GOOGLE_AGENT_CONTEXT,
     GOOGLE_MEETING_NOTES,
-    ModelFactory,
+    get_model,
 )
 from src.infrastructure.logging.logging_config import get_logger
 from src.integrations.general_tools import DateToolsSpecs
@@ -57,7 +57,7 @@ class GoogleAgentServer(BaseAgentServer):
         google_agent = ReActAgent(
             name="google-agent",
             tools=tools,
-            llm=llm.llm,
+            llm=llm,
             system_prompt=GOOGLE_AGENT_CONTEXT,
             output_cls=AgentResponseFormat,
             **config.config.agent_config,
@@ -119,7 +119,7 @@ class GoogleAgentServer(BaseAgentServer):
 # Initialize the server
 logger.info("Initializing Google agent server")
 server = GoogleAgentServer(
-    llm=ModelFactory(config.config),
+    llm=get_model(config.config),
     title="Google Agent",
     description=(
         "An API to expose a LlamaIndex "
