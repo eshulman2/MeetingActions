@@ -37,6 +37,17 @@ class BaseServer(ABC):
     """Base class for agent servers with common FastAPI functionality."""
 
     def __init__(self, llm, title: str, description: str):
+        """Initialize the base server with FastAPI app and service configuration.
+
+        Sets up the FastAPI application, creates the service instance (agent or
+        workflow), configures routing based on service type, and initializes
+        the workflow context.
+
+        Args:
+            llm: The language model instance to pass to the service.
+            title: The title for the FastAPI application.
+            description: The description for the FastAPI application.
+        """
         logger.info(f"Initializing {title} server")
         self.service = self.create_service(llm)
         self.ctx = Context(self.service)
@@ -58,6 +69,12 @@ class BaseServer(ABC):
 
         @self.app.get("/description")
         async def description_endpoint():
+            """Get the server description.
+
+            Returns:
+                str: The description of this server instance as configured
+                during initialization.
+            """
             return self.app.description
 
         @self.app.get("/")
@@ -87,18 +104,14 @@ class BaseServer(ABC):
             - This ensures compatibility with agents that return structured formats
               while maintaining backward compatibility with simple string responses
             """
-            logger.info(
-                f"Agent endpoint called with query: {request.query[:100]}..."
-            )
+            logger.info(f"Agent endpoint called with query: {request.query[:100]}...")
             try:
                 session_id = f"{getattr(
                     self.service, 'name', 'agent')}-endpoint-{uuid4()}"
 
                 mem = Memory.from_defaults(session_id=session_id)
 
-                with langfuse_client.start_as_current_span(
-                    name=session_id
-                ) as span:
+                with langfuse_client.start_as_current_span(name=session_id) as span:
 
                     agent_response = await self.service.run(
                         request.query, ctx=self.ctx, memory=mem

@@ -40,11 +40,9 @@ def get_model(config) -> OpenAI | GoogleGenAI | OpenAILike:
         )
 
     if not config.verify_ssl:
-        config.additional_model_parameter["http_client"] = httpx.Client(
+        config.additional_model_parameter["http_client"] = httpx.Client(verify=False)
+        config.additional_model_parameter["async_http_client"] = httpx.AsyncClient(
             verify=False
-        )
-        config.additional_model_parameter["async_http_client"] = (
-            httpx.AsyncClient(verify=False)
         )
 
     llm_object = SUPPORTED_LLMS.get(config.llm)
@@ -52,4 +50,4 @@ def get_model(config) -> OpenAI | GoogleGenAI | OpenAILike:
         model=config.model,
         api_key=api_key,
         **config.additional_model_parameter,
-    )
+    )  # type: ignore[misc]

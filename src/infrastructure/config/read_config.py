@@ -28,20 +28,21 @@ class ConfigSchema(BaseModel):
 class ConfigReader:
     """Class for loading user configuration"""
 
-    def __init__(
-        self, path=os.environ.get("CONFIG_PATH", "config.json")
-    ) -> None:
-        with open(path, "r") as config:
+    def __init__(self, path=os.environ.get("CONFIG_PATH", "config.json")) -> None:
+        with open(path, "r") as config_file:
             try:
-                config = json.load(config)
+                config_data = json.load(config_file)
             except json.JSONDecodeError as ex:
-                # pylint: disable=no-value-for-parameter
                 raise json.JSONDecodeError(
-                    "Config json failed loading with the"
-                    f"following exception: {ex}"
-                )
+                    msg=(
+                        "Config json failed loading with the "
+                        f"following exception: {ex}"
+                    ),
+                    doc=ex.doc,
+                    pos=ex.pos,
+                ) from ex
 
             try:
-                self.config = ConfigSchema(**config)
+                self.config = ConfigSchema(**config_data)
             except ValidationError as err:
                 raise err
