@@ -2,6 +2,7 @@
 Base agent server module providing common FastAPI functionality for all agents.
 """
 
+import time
 from abc import ABC, abstractmethod
 from uuid import uuid4
 
@@ -84,6 +85,22 @@ class BaseServer(ABC):
             return {
                 "message": f"{self.app.title}, "
                 "API is running. Go to /docs for interactive documentation."
+            }
+
+        @self.app.get("/health")
+        async def health_check():
+            """Health check endpoint for monitoring and load balancer status.
+
+            Returns:
+                dict: Health status information including service status,
+                timestamp, and basic service metadata.
+            """
+            logger.debug("Health check endpoint accessed")
+            return {
+                "status": "healthy",
+                "service": self.app.title,
+                "version": self.app.version,
+                "timestamp": time.time(),
             }
 
     def _setup_agent_routes(self):
