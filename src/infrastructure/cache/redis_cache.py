@@ -2,23 +2,37 @@
 
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 import redis
 from redis.exceptions import ConnectionError, RedisError
 
 from src import config
+from src.common.singleton_meta import SingletonMeta
 from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("redis_cache")
 
 
-class RedisDocumentCache:
-    """Redis-based cache for Google Documents with TTL support"""
+class RedisDocumentCache(metaclass=SingletonMeta):
+    """Redis-based cache for Google Documents with TTL support
+
+    This class implements the Singleton pattern to ensure only one
+    Redis connection is maintained throughout the application lifecycle.
+    """
 
     def __init__(self):
-        """Initialize Redis connection and cache settings"""
+        """Initialize Redis connection and cache settings
+
+        Note: Due to singleton pattern, this will only be called once
+        per application lifecycle.
+        """
+        # Prevent re-initialization if already initialized
+        if hasattr(self, "_initialized"):
+            return
+
+        self._initialized = True
         self.enabled = getattr(config.config, "cache_config", {}).get(
             "enabled", False
         )
@@ -70,7 +84,7 @@ class RedisDocumentCache:
         data = {
             "content": content,
             "title": title,
-            "cached_at": datetime.utcnow().isoformat(),
+            "cached_at": datetime.now(timezone.utc).isoformat(),
             "content_hash": hashlib.md5(content.encode()).hexdigest(),
         }
         return json.dumps(data)
@@ -150,9 +164,9 @@ class RedisDocumentCache:
                     f"Cached document {document_id} with TTL {self.ttl_hours}h"
                 )
                 return True
-            else:
-                logger.warning(f"Failed to cache document {document_id}")
-                return False
+
+            logger.warning(f"Failed to cache document {document_id}")
+            return False
 
         except RedisError as e:
             logger.error(f"Redis error caching document {document_id}: {e}")
@@ -217,11 +231,9 @@ class RedisDocumentCache:
             if result > 0:
                 logger.debug(f"Invalidated cache for document: {document_id}")
                 return True
-            else:
-                logger.debug(
-                    f"No cache entry found for document: {document_id}"
-                )
-                return False
+
+            logger.debug(f"No cache entry found for document: {document_id}")
+            return False
 
         except RedisError as e:
             logger.error(
@@ -279,9 +291,9 @@ class RedisDocumentCache:
                 deleted_count = self.redis_client.delete(*gdoc_keys)
                 logger.info(f"Cleared {deleted_count} cached documents")
                 return True
-            else:
-                logger.info("No cached documents to clear")
-                return True
+
+            logger.info("No cached documents to clear")
+            return True
 
         except RedisError as e:
             logger.error(f"Redis error clearing cache: {e}")
@@ -291,13 +303,10 @@ class RedisDocumentCache:
             return False
 
 
-# Global cache instance
-_cache_instance = None
-
-
 def get_cache() -> RedisDocumentCache:
-    """Get or create global cache instance"""
-    global _cache_instance
-    if _cache_instance is None:
-        _cache_instance = RedisDocumentCache()
-    return _cache_instance
+    """Get the singleton cache instance
+
+    Returns:
+        RedisDocumentCache: The singleton cache instance
+    """
+    return RedisDocumentCache()
