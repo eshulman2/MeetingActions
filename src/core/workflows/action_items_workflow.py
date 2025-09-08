@@ -172,17 +172,14 @@ class ActionItemsWorkflow(Workflow):
             **kwargs: Additional keyword arguments passed to parent Workflow
         """
         logger.info(
-            "Initializing ActionItemsWorkflow with max_iterations: "
-            f"{max_iterations}"
+            "Initializing ActionItemsWorkflow with max_iterations: " f"{max_iterations}"
         )
 
         # Initialize the super class
         super().__init__(*args, **kwargs)
         # Store input into instance variables
         self.max_retries = max_iterations
-        self.memory = Memory.from_defaults(
-            session_id="my_session", token_limit=40000
-        )
+        self.memory = Memory.from_defaults(session_id="my_session", token_limit=40000)
         self.llm = llm
         logger.debug("ActionItemsWorkflow initialized successfully")
 
@@ -209,9 +206,7 @@ class ActionItemsWorkflow(Workflow):
             f"Getting meeting notes for meeting: {event['meeting']}, "
             f"date: {event['date']}"
         )
-        encoded_url = urlencode(
-            {"meeting": event["meeting"], "date": event["date"]}
-        )
+        encoded_url = urlencode({"meeting": event["meeting"], "date": event["date"]})
         try:
             response = requests.get(
                 f"{config.config.meeting_notes_endpoint}?{encoded_url}",
@@ -220,9 +215,7 @@ class ActionItemsWorkflow(Workflow):
             response.raise_for_status()
             logger.debug("Successfully retrieved meeting notes from API")
         except requests.exceptions.RequestException as e:
-            logger.error(
-                f"An error occurred while fetching meeting notes: {e}"
-            )
+            logger.error(f"An error occurred while fetching meeting notes: {e}")
             raise requests.exceptions.RequestException from e
 
         response_json = response.json()
@@ -269,9 +262,7 @@ class ActionItemsWorkflow(Workflow):
 
             self.memory.put_messages(
                 [
-                    ChatMessage(
-                        role=MessageRole.SYSTEM, content=ACTION_ITEMS_CONTEXT
-                    ),
+                    ChatMessage(role=MessageRole.SYSTEM, content=ACTION_ITEMS_CONTEXT),
                     ChatMessage(
                         role=MessageRole.USER,
                         content=ACTION_ITEMS_PROMPT.format(
@@ -313,9 +304,7 @@ class ActionItemsWorkflow(Workflow):
         output = await self.llm.achat(self.memory.get())
         logger.debug("LLM response generated for action items")
 
-        self.memory.put(
-            ChatMessage(role=MessageRole.ASSISTANT, content=output)
-        )
+        self.memory.put(ChatMessage(role=MessageRole.ASSISTANT, content=output))
 
         logger.info("Action items created successfully")
         return ActionItemsDone(
@@ -353,14 +342,10 @@ class ActionItemsWorkflow(Workflow):
             logger.info("Review passed: No changes required")
             return JsonCheckEvent(action_items=event.action_items)
         logger.info("Review identified issues: Changes required")
-        return ReviewErrorEvent(
-            action_items=event.action_items, review=str(review)
-        )
+        return ReviewErrorEvent(action_items=event.action_items, review=str(review))
 
     @step
-    async def json_check(
-        self, event: JsonCheckEvent
-    ) -> ToolRouter | JsonCheckError:
+    async def json_check(self, event: JsonCheckEvent) -> ToolRouter | JsonCheckError:
         """Validate that action items are in proper JSON format.
 
         Args:
@@ -438,14 +423,13 @@ class ActionItemsWorkflow(Workflow):
                     f"{action_item["description"]} "
                     f"to agent {str(res)}"
                 )
-                ctx.send_event(
-                    DispatchToAgent(agent=str(res), action_item=action_item)
-                )
+                ctx.send_event(DispatchToAgent(agent=str(res), action_item=action_item))
                 tool_calls += 1
             except Exception as e:
                 logger.error(e)
 
         ctx.store.set("tool_calls", tool_calls)
+        return None
 
     @step
     async def dispatch_to_agent(self, event: DispatchToAgent) -> ToolResult:
@@ -475,9 +459,7 @@ class ActionItemsWorkflow(Workflow):
             )
             logger.debug(res.json())
         except requests.exceptions.RequestException as e:
-            logger.error(
-                f"An error occurred while calling {event.agent} agent: {e}"
-            )
+            logger.error(f"An error occurred while calling {event.agent} agent: {e}")
             return ToolResult(
                 action_item=event.action_item["description"],
                 response=f"An error occurred while calling {event.agent} agent: {e}",

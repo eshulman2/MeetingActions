@@ -1,3 +1,5 @@
+"""Action items server"""
+
 from typing import Dict
 from uuid import uuid4
 
@@ -79,9 +81,7 @@ class ActionItemsServer(BaseServer):
             try:
 
                 session_id = f"action-items-workflow-{str(uuid4())}"
-                with langfuse_client.start_as_current_span(
-                    name=session_id
-                ) as span:
+                with langfuse_client.start_as_current_span(name=session_id) as span:
 
                     res = await self.service.run(
                         meeting=request.meeting, date=request.date
@@ -108,9 +108,7 @@ logger.info("Initializing Action Items Workflow server")
 server = ActionItemsServer(
     llm=get_model(config.config),
     title="Action Items Workflow",
-    description=(
-        "llamaindex workflow for taking meeting notes and process them"
-    ),
+    description=("llamaindex workflow for taking meeting notes and process them"),
 )
 app = server.app
 logger.info("Action Items Workflow server initialized successfully")
