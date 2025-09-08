@@ -1,6 +1,12 @@
 {
-    "llm": "Gemini",
+    "llm": "OpenAILike",
     "model": "gemini-2.0-flash",
+    "verify_ssl": true,
+    "additional_model_parameter": {
+        "api_base": "https://someendpoint/v1beta/openai",
+        "is_chat_model": true
+
+    },
     "tools_config": {
         "jira_tool": {
             "server": "https://issues.redhat.com"
@@ -29,5 +35,10 @@
         "host": "localhost",
         "port": 6380,
         "password": "12345"
-    }
+    },
+    "agents": {
+     "google": "http://127.0.0.1:8000",
+     "jira": "http://127.0.0.1:8001"
+    },
+    "meeting_notes_endpoint": "http://127.0.0.1:8000/meeting-notes"
 }
