@@ -1,6 +1,12 @@
-"""
-This file is a technically unnecessary reflection workflow
-but I'm here to practice so, so be it
+"""Action Items Workflow for Meeting Notes Processing.
+
+This module implements a comprehensive workflow for processing meeting notes
+and generating structured action items. The workflow includes multiple steps
+for content analysis, validation, review cycles, and integration with external
+agent systems for task execution.
+
+The workflow uses LlamaIndex's event-driven architecture to handle complex
+multi-step processes with error handling, retry mechanisms, and observability.
 """
 
 import json
@@ -49,6 +55,12 @@ llm = ModelFactory(config.config)
 
 
 class MeetingNotesEvent(Event):
+    """Event containing meeting notes content for processing.
+
+    Attributes:
+        meeting_notes: The raw meeting notes text content
+    """
+
     meeting_notes: str
 
 
@@ -98,19 +110,46 @@ class JsonCheckError(Event):
 
 
 class ToolRouter(Event):
+    """Event for routing action items to appropriate agent tools.
+
+    Attributes:
+        action_items: Dictionary containing structured action items
+    """
+
     action_items: Dict
 
 
 class DispatchToAgent(Event):
+    """Event for dispatching individual action items to specific agents.
+
+    Attributes:
+        agent: Name/identifier of the target agent
+        action_item: Single action item dictionary to be processed
+    """
+
     agent: str
     action_item: Dict
 
 
 class NoActionCall(Event):
+    """Event triggered when no agent action is required for an action item.
+
+    Attributes:
+        action_item: Action item that doesn't require agent processing
+    """
+
     action_item: Dict
 
 
 class ToolResult(Event):
+    """Event containing the result of agent tool execution.
+
+    Attributes:
+        action_item: The action item that was processed
+        response: Response from the agent tool execution
+        error: Boolean indicating if an error occurred during execution
+    """
+
     action_item: Dict
     response: str
     error: bool
@@ -153,8 +192,23 @@ class ActionItemsWorkflow(Workflow):
 
     @step
     async def get_meeting_notes(
-        self, ctx: Context, event: StartEvent
+        self, event: StartEvent
     ) -> MeetingNotesEvent | StopEvent:
+        """Retrieve meeting notes from the configured endpoint.
+
+        This step fetches meeting notes from an external API endpoint based
+        on the meeting name and date provided in the StartEvent.
+
+        Args:
+            ctx: Workflow context for state management
+            event: StartEvent containing meeting and date parameters
+
+        Returns:
+            MeetingNotesEvent with the retrieved notes, or StopEvent if error
+
+        Raises:
+            requests.exceptions.RequestException: If API request fails
+        """
         logger.info(
             f"Getting meeting notes for meeting: {event['meeting']}, "
             f"date: {event['date']}"
@@ -164,7 +218,8 @@ class ActionItemsWorkflow(Workflow):
         )
         try:
             response = requests.get(
-                f"{config.config.meeting_notes_endpoint}?{encoded_url}"
+                f"{config.config.meeting_notes_endpoint}?{encoded_url}",
+                timeout=30,
             )
             response.raise_for_status()
             logger.debug("Successfully retrieved meeting notes from API")
@@ -339,11 +394,23 @@ class ActionItemsWorkflow(Workflow):
     async def tool_router(
         self, ctx: Context, event: ToolRouter
     ) -> DispatchToAgent | None:
+        """Route action items to appropriate agents based on their capabilities.
+
+        This step analyzes each action item and determines which agent is best
+        suited to handle it based on agent descriptions and capabilities.
+
+        Args:
+            ctx: Workflow context for state management
+            event: ToolRouter event containing action items to route
+
+        Returns:
+            DispatchToAgent events for each routable action item, or None
+        """
         agent_list = []
         for agent, url in config.config.agents.items():
             try:
                 logger.debug(f"Fetching {agent} agent description")
-                res = requests.get(f"{url}/description")
+                res = requests.get(f"{url}/description", timeout=5)
                 res.raise_for_status()
                 agent_list.append(f"{agent}: {res.content.decode('utf-8')}")
             except requests.exceptions.RequestException as e:
@@ -370,9 +437,11 @@ class ActionItemsWorkflow(Workflow):
                         ),
                     ]
                 )
-                logger.info("Dispatching action item: "
-                            f"{action_item["description"]} "
-                            f"to agent {str(res)}")
+                logger.info(
+                    "Dispatching action item: "
+                    f"{action_item["description"]} "
+                    f"to agent {str(res)}"
+                )
                 ctx.send_event(
                     DispatchToAgent(agent=str(res), action_item=action_item)
                 )
@@ -383,9 +452,19 @@ class ActionItemsWorkflow(Workflow):
         ctx.store.set("tool_calls", tool_calls)
 
     @step
-    async def dispatch_to_agent(
-        self, ctx: Context, event: DispatchToAgent
-    ) -> ToolResult:
+    async def dispatch_to_agent(self, event: DispatchToAgent) -> ToolResult:
+        """Dispatch action item to the specified agent for execution.
+
+        This step sends an action item to the designated agent and processes
+        the response, handling both successful executions and errors.
+
+        Args:
+            ctx: Workflow context for state management
+            event: DispatchToAgent event with agent and action item details
+
+        Returns:
+            ToolResult containing the agent's response and execution status
+        """
         if event.agent == "UNASSIGNED_AGENT":
             return ToolResult(
                 action_item=event.action_item["description"],
@@ -396,6 +475,7 @@ class ActionItemsWorkflow(Workflow):
             res = requests.post(
                 f"{config.config.agents}/agent",
                 json={"query": AGENT_QUERY_PROMPT.format(event.action_item)},
+                timeout=30,
             )
             logger.debug(res.json())
         except requests.exceptions.RequestException as e:
@@ -418,6 +498,19 @@ class ActionItemsWorkflow(Workflow):
     async def collect_tool_results(
         self, ctx: Context, event: ToolResult
     ) -> StopEvent | None:
+        """Collect and aggregate results from all agent tool executions.
+
+        This step waits for all dispatched action items to complete and
+        aggregates their results for final workflow output.
+
+        Args:
+            ctx: Workflow context for state management
+            event: ToolResult from individual agent execution
+
+        Returns:
+            StopEvent with aggregated results when all tools complete,
+            or None if still waiting for more results
+        """
         tool_calls = ctx.store.get("tool_calls")
         result = ctx.collect_events(event, [ToolResult] * tool_calls)
         if result is None:
@@ -428,14 +521,23 @@ class ActionItemsWorkflow(Workflow):
 
 
 class Meeting(BaseModel):
-    """The request model for a user's query."""
+    """Request model for meeting information.
+
+    Attributes:
+        meeting: Name or identifier of the meeting
+        date: Date of the meeting in string format
+    """
 
     meeting: str
     date: str
 
 
 class ActionItemsResponse(BaseModel):
-    """The response model for the agent's answer."""
+    """Response model for workflow output.
+
+    Attributes:
+        action_items: Dictionary containing structured action items
+    """
 
     action_items: Dict
 
@@ -449,7 +551,21 @@ app = FastAPI(
 
 @app.post("/action-items", response_model=ActionItemsResponse)
 async def create_action_items_endpoint(request: Meeting):
-    """Action items workflow"""
+    """FastAPI endpoint for processing meeting notes into action items.
+
+    This endpoint initializes and runs the ActionItemsWorkflow to process
+    meeting information and generate structured action items with full
+    observability tracking via Langfuse.
+
+    Args:
+        request: Meeting request containing meeting name and date
+
+    Returns:
+        ActionItemsResponse with generated action items
+
+    Raises:
+        HTTPException: If workflow execution fails
+    """
     logger.info(
         f"Processing action items request with {len(request.meeting)} "
         "characters of meeting notes"

@@ -6,20 +6,15 @@ from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
 from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("configs.observability")
-_langfuse_enabled = False
 
 
 def set_up_langfuse(
     secret_key: str, public_key: str, host: str, **kwargs
 ) -> None:
     """Initialize Langfuse client with environment variables."""
-    global _langfuse_enabled
 
-    _langfuse_enabled = kwargs.get("enable", False)
-
-    if not _langfuse_enabled:
+    if not kwargs.get("enable", False):
         logger.info("Langfuse observability is disabled")
-        return None
 
     if not secret_key or not public_key or not host:
         raise ValueError(

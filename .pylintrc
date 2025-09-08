@@ -1,4 +1,4 @@
 [MESSAGES CONTROL]
-disable=W1514,R0903,W1203
+disable=W1514,R0903,W1203,W0718,E1129
 [SIMILARITIES]
 min-similarity-lines=10 ; or a higher value

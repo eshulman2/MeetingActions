@@ -1,3 +1,6 @@
+"""Singleton metaclass for common usage"""
+
+
 class SingletonMeta(type):
     """Metaclass for implementing singleton pattern"""
 

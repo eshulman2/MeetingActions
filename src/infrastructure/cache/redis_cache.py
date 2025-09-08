@@ -6,7 +6,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 import redis
-from redis.exceptions import ConnectionError, RedisError
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import (
+    RedisError,
+)
 
 from src import config
 from src.common.singleton_meta import SingletonMeta
@@ -66,7 +69,7 @@ class RedisDocumentCache(metaclass=SingletonMeta):
             logger.info(
                 f"Redis cache initialized with TTL: {self.ttl_hours} hours"
             )
-        except ConnectionError as e:
+        except RedisConnectionError as e:
             logger.error(f"Failed to connect to Redis: {e}")
             self.enabled = False
         except Exception as e:

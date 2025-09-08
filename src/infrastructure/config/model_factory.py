@@ -4,6 +4,7 @@ This module is used to load, validate and create llm object from user config
 
 import os
 
+import httpx
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.llms.openai import OpenAI
 from llama_index.llms.openai_like import OpenAILike
@@ -42,8 +43,6 @@ class ModelFactory:
             )
 
         if not config.verify_ssl:
-            import httpx
-
             config.additional_model_parameter["http_client"] = httpx.Client(
                 verify=False
             )
