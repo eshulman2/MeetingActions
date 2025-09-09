@@ -1,22 +1,36 @@
-auto_mix_prep
-fastapi
-fastmcp
-google_api_python_client
-google_auth_oauthlib
-jira
-langchain_core
-langgraph
-llama_index
-nest_asyncio
-protobuf
-pydantic
-Requests
-tzlocal
-llama-index-llms-google-genai
-llama-index-tools-mcp
-llama-index-tools-google
-langfuse
-openinference-instrumentation-llama-index
-redis
-uvicorn
-llama-index-llms-openai-like
+# Core web framework and server
+fastapi==0.116.1
+uvicorn==0.35.0
+pydantic==2.11.7
+
+# HTTP client and requests
+requests==2.32.5
+
+# AI/LLM frameworks and tools
+llama-index==0.13.3
+llama-index-llms-google-genai==0.3.0
+llama-index-llms-openai-like==0.5.0
+llama-index-llms-openai==0.5.0
+llama-index-tools-mcp==0.4.0
+llama-index-tools-google==0.6.0
+
+# Observability and monitoring
+langfuse==3.3.2
+openinference-instrumentation-llama-index==4.3.4
+
+# Integration APIs
+google-api-python-client==2.178.0
+google-auth-oauthlib==1.2.2
+jira==3.10.5
+
+# Cache and data storage
+redis==6.4.0
+
+# MCP (Model Context Protocol)
+fastmcp==2.11.3
+
+# Utilities and helpers
+nest-asyncio==1.6.0
+protobuf==5.29.5
+tzlocal==5.3.1
+auto_mix_prep==0.2.0
