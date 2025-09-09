@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from src import config
 from src.core.agent_utils import safe_load_mcp_tools
-from src.core.base.base_agent_server import BaseServer
+from src.core.base.base_agent_server import BaseAgentServer
 from src.infrastructure.config import (
     GOOGLE_AGENT_CONTEXT,
     GOOGLE_MEETING_NOTES,
@@ -32,9 +32,7 @@ nest_asyncio.apply()
 class AgentResponseFormat(BaseModel):
     """test format for meeting note endpoint reply"""
 
-    response: str = Field(
-        description="Response if an error occurred describe it"
-    )
+    response: str = Field(description="Response if an error occurred describe it")
     error: bool = Field(
         description="field indicating on rather or not an error occurred"
     )
@@ -43,7 +41,7 @@ class AgentResponseFormat(BaseModel):
     )
 
 
-class GoogleAgentServer(BaseServer):
+class GoogleAgentServer(BaseAgentServer):
     """Google agent server implementation."""
 
     def create_service(self, llm):
@@ -79,23 +77,17 @@ class GoogleAgentServer(BaseServer):
                 session_id = f"meeting-notes-{str(uuid4())}"
                 mem = Memory.from_defaults(session_id=session_id)
 
-                with langfuse_client.start_as_current_span(
-                    name=session_id
-                ) as span:
+                with langfuse_client.start_as_current_span(name=session_id) as span:
 
                     agent_response = await self.service.run(
-                        GOOGLE_MEETING_NOTES.format(
-                            date=date, meeting=meeting
-                        ),
+                        GOOGLE_MEETING_NOTES.format(date=date, meeting=meeting),
                         ctx=self.ctx,
                         memory=mem,
                     )
 
                     span.update_trace(
                         session_id=session_id,
-                        input=GOOGLE_MEETING_NOTES.format(
-                            date=date, meeting=meeting
-                        ),
+                        input=GOOGLE_MEETING_NOTES.format(date=date, meeting=meeting),
                         output=str(
                             getattr(
                                 agent_response,

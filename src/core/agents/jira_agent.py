@@ -9,7 +9,7 @@ from llama_index.core.agent.workflow import ReActAgent
 
 from src import config
 from src.core.agent_utils import safe_load_mcp_tools
-from src.core.base.base_agent_server import BaseServer
+from src.core.base.base_agent_server import BaseAgentServer
 from src.infrastructure.config import JIRA_AGENT_CONTEXT, get_model
 from src.infrastructure.logging.logging_config import get_logger
 from src.integrations.general_tools import DateToolsSpecs
@@ -20,7 +20,7 @@ logger = get_logger("agents.jira")
 nest_asyncio.apply()
 
 
-class JiraAgentServer(BaseServer):
+class JiraAgentServer(BaseAgentServer):
     """Jira agent server implementation."""
 
     def create_service(self, llm):

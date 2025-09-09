@@ -8,7 +8,7 @@ from langfuse import get_client as get_langfuse_client
 from pydantic import BaseModel
 
 from src import config
-from src.core.base.base_agent_server import BaseServer
+from src.core.base.base_server import BaseServer
 from src.core.workflows.action_items_workflow import ActionItemsWorkflow
 from src.infrastructure.config import get_model
 from src.infrastructure.logging.logging_config import get_logger
