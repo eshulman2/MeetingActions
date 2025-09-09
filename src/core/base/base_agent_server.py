@@ -7,9 +7,10 @@ from pydantic import BaseModel
 
 from src.core.base.base_server import BaseServer
 from src.infrastructure.logging.logging_config import get_logger
+from src.infrastructure.observability.observability import set_up_langfuse
 
+set_up_langfuse()
 logger = get_logger("agents.base")
-langfuse_client = get_langfuse_client()
 
 
 class ChatQuery(BaseModel):
@@ -53,6 +54,8 @@ class BaseAgentServer(BaseServer):
                     self.service, 'name', 'agent')}-endpoint-{uuid4()}"
 
                 mem = Memory.from_defaults(session_id=session_id)
+
+                langfuse_client = get_langfuse_client()
 
                 with langfuse_client.start_as_current_span(name=session_id) as span:
 

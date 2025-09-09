@@ -3,25 +3,32 @@
 from langfuse import Langfuse
 from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
 
+from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("configs.observability")
 
 
-def set_up_langfuse(
-    secret_key: str, public_key: str, host: str, **kwargs
-) -> None:
+def set_up_langfuse() -> None:
     """Initialize Langfuse client with environment variables."""
+    config = get_config()
 
-    if not kwargs.get("enable", False):
+    if not config.config.observability.enable:
         logger.info("Langfuse observability is disabled")
+        return
 
-    if not secret_key or not public_key or not host:
-        raise ValueError(
-            "LANGFUSE_SECRET_KEY and LANGFUSE_PUBLIC_KEY must be set"
-        )
+    if (
+        not config.config.observability.secret_key
+        or not config.config.observability.public_key
+        or not config.config.observability.host
+    ):
+        raise ValueError("LANGFUSE_SECRET_KEY and LANGFUSE_PUBLIC_KEY must be set")
 
     logger.info("Applying tracing")
-    Langfuse(secret_key=secret_key, public_key=public_key, host=host)
+    Langfuse(
+        secret_key=config.config.observability.secret_key,
+        public_key=config.config.observability.public_key,
+        host=str(config.config.observability.host),
+    )
     LlamaIndexInstrumentor().instrument()
     logger.info("Tracing applied")

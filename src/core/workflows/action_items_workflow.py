@@ -16,7 +16,6 @@ from urllib.parse import urlencode
 
 import nest_asyncio
 import requests
-from langfuse import get_client as get_langfuse_client
 from llama_index.core.llms import ChatMessage, MessageRole
 from llama_index.core.memory import Memory
 from llama_index.core.workflow import (
@@ -28,7 +27,6 @@ from llama_index.core.workflow import (
     step,
 )
 
-from src import config
 from src.infrastructure.config import (
     ACTION_ITEMS_CONTEXT,
     ACTION_ITEMS_PROMPT,
@@ -39,11 +37,12 @@ from src.infrastructure.config import (
     REVIEWER_PROMPT,
     TOOL_DISPATCHER_CONTEXT,
     TOOL_DISPATCHER_PROMPT,
+    get_config,
 )
 from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("workflows.action_items_workflow")
-langfuse_client = get_langfuse_client()
+config = get_config()
 
 nest_asyncio.apply()
 

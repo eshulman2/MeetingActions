@@ -11,8 +11,8 @@ from redis.exceptions import (
     RedisError,
 )
 
-from src import config
 from src.common.singleton_meta import SingletonMeta
+from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("redis_cache")
@@ -35,40 +35,32 @@ class RedisDocumentCache(metaclass=SingletonMeta):
         if hasattr(self, "_initialized"):
             return
 
+        config = get_config()
+
         self._initialized = True
-        self.enabled = getattr(config.config, "cache_config", {}).get(
-            "enabled", False
-        )
+        self.enabled = config.config.cache_config.enable
+
         if not self.enabled:
             logger.info("Redis cache disabled in configuration")
             return
 
-        self.ttl_hours = getattr(config.config, "cache_config", {}).get(
-            "ttl_hours", 24
-        )
+        self.ttl_hours = config.config.cache_config.ttl_hours
+
         self.ttl_seconds = self.ttl_hours * 3600
 
         try:
             self.redis_client = redis.Redis(
-                host=getattr(config.config, "cache_config", {}).get(
-                    "host", "localhost"
-                ),
-                port=getattr(config.config, "cache_config", {}).get(
-                    "port", 6379
-                ),
+                host=config.config.cache_config.host,
+                port=config.config.cache_config.port,
                 db=0,
                 decode_responses=True,
                 socket_connect_timeout=5,
                 socket_timeout=5,
-                password=getattr(config.config, "cache_config", {}).get(
-                    "password", None
-                ),
+                password=config.config.cache_config.password,
             )
             # Test connection
             self.redis_client.ping()
-            logger.info(
-                f"Redis cache initialized with TTL: {self.ttl_hours} hours"
-            )
+            logger.info(f"Redis cache initialized with TTL: {self.ttl_hours} hours")
         except RedisConnectionError as e:
             logger.error(f"Failed to connect to Redis: {e}")
             self.enabled = False
@@ -82,7 +74,7 @@ class RedisDocumentCache(metaclass=SingletonMeta):
         """Generate cache key for document"""
         return f"gdoc:{content_type}:{document_id}"
 
-    def _serialize_document_data(self, content: str, title: str = None) -> str:
+    def _serialize_document_data(self, content: str, title: str | None = None) -> str:
         """Serialize document data for storage"""
         data = {
             "content": content,
@@ -138,7 +130,7 @@ class RedisDocumentCache(metaclass=SingletonMeta):
             return None
 
     def set_document_content(
-        self, document_id: str, content: str, title: str = None
+        self, document_id: str, content: str, title: str | None = None
     ) -> bool:
         """
         Store document content in cache
@@ -175,9 +167,7 @@ class RedisDocumentCache(metaclass=SingletonMeta):
             logger.error(f"Redis error caching document {document_id}: {e}")
             return False
         except Exception as e:
-            logger.error(
-                f"Unexpected error caching document {document_id}: {e}"
-            )
+            logger.error(f"Unexpected error caching document {document_id}: {e}")
             return False
 
     def get_document_title(self, document_id: str) -> Optional[str]:
@@ -204,9 +194,7 @@ class RedisDocumentCache(metaclass=SingletonMeta):
             return document_data.get("title")
 
         except RedisError as e:
-            logger.error(
-                f"Redis error retrieving title for {document_id}: {e}"
-            )
+            logger.error(f"Redis error retrieving title for {document_id}: {e}")
             return None
         except Exception as e:
             logger.error(
@@ -239,9 +227,7 @@ class RedisDocumentCache(metaclass=SingletonMeta):
             return False
 
         except RedisError as e:
-            logger.error(
-                f"Redis error invalidating document {document_id}: {e}"
-            )
+            logger.error(f"Redis error invalidating document {document_id}: {e}")
             return False
         except Exception as e:
             logger.error(

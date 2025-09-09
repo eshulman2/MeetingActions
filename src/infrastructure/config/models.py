@@ -2,12 +2,12 @@
 This module is used to load, validate and create llm object from user config
 """
 
-import os
-
 import httpx
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.llms.openai import OpenAI
 from llama_index.llms.openai_like import OpenAILike
+
+from src.infrastructure.config.read_config import ConfigSchema
 
 SUPPORTED_LLMS = {
     "OpenAI": OpenAI,
@@ -26,7 +26,7 @@ class LlmNotSupported(Exception):
         )
 
 
-def get_model(config) -> OpenAI | GoogleGenAI | OpenAILike:
+def get_model(config: ConfigSchema) -> OpenAI | GoogleGenAI | OpenAILike:
     """Create and configure a language model instance from configuration.
 
     This function creates a language model instance based on the provided
@@ -66,8 +66,7 @@ def get_model(config) -> OpenAI | GoogleGenAI | OpenAILike:
     if config.llm not in SUPPORTED_LLMS.keys():
         raise LlmNotSupported
 
-    api_key = os.environ.get("MODEL_API_KEY", config.api_key)
-    if not api_key:
+    if not config.model_api_key:
         raise ValueError(
             "Api key is not set please set it in config "
             "file or using MODEL_API_KEY environment "
@@ -83,6 +82,6 @@ def get_model(config) -> OpenAI | GoogleGenAI | OpenAILike:
     llm_object = SUPPORTED_LLMS.get(config.llm)
     return llm_object(
         model=config.model,
-        api_key=api_key,
+        api_key=config.model_api_key,
         **config.additional_model_parameter,
     )  # type: ignore[misc]

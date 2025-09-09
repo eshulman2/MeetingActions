@@ -8,8 +8,8 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
-from src import config
 from src.infrastructure.cache.redis_cache import get_cache
+from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 from src.integrations.google_tools.auth_utils import authenticate
 
@@ -32,9 +32,7 @@ class GoogleToolSpec(BaseToolSpec):
         try:
             logger.info("Initializing Google tools spec")
 
-            self.calendar_service = build(
-                "calendar", "v3", credentials=authenticate()
-            )
+            self.calendar_service = build("calendar", "v3", credentials=authenticate())
             logger.debug("Google Calendar service initialized successfully")
 
             self.meet_service = build("meet", "v2", credentials=authenticate())
@@ -47,9 +45,7 @@ class GoogleToolSpec(BaseToolSpec):
             logger.debug("Redis cache initialized")
 
         except HttpError as error:
-            logger.error(
-                f"Failed to initialize Google Calendar service: {error}"
-            )
+            logger.error(f"Failed to initialize Google Calendar service: {error}")
             raise HttpError from error
 
     def get_event_gdoc_attachments_ids(
@@ -94,9 +90,7 @@ class GoogleToolSpec(BaseToolSpec):
                         file_id = attachment.get("fileId")
                         if file_id:
                             google_doc_ids.append(file_id)
-                            logger.debug(
-                                f"Found Google Doc attachment: {file_id}"
-                            )
+                            logger.debug(f"Found Google Doc attachment: {file_id}")
 
             else:
                 logger.info("Event has no attachments")
@@ -106,9 +100,7 @@ class GoogleToolSpec(BaseToolSpec):
             return google_doc_ids
 
         except HttpError as error:
-            logger.error(
-                f"Failed to get event attachments for {event_id}: {error}"
-            )
+            logger.error(f"Failed to get event attachments for {event_id}: {error}")
             raise HttpError from error
 
     def get_events_by_date(
@@ -133,14 +125,8 @@ class GoogleToolSpec(BaseToolSpec):
         target_date = datetime(year, month, day).date()
         # Format the date to RFC3339 timestamp format required by the API.
         # 'Z' indicates UTC time.
-        time_min = (
-            datetime.combine(target_date, datetime.min.time()).isoformat()
-            + "Z"
-        )
-        time_max = (
-            datetime.combine(target_date, datetime.max.time()).isoformat()
-            + "Z"
-        )
+        time_min = datetime.combine(target_date, datetime.min.time()).isoformat() + "Z"
+        time_max = datetime.combine(target_date, datetime.max.time()).isoformat() + "Z"
 
         logger.info(
             f"Fetching events for {target_date.strftime('%Y-%m-%d')} "
@@ -202,11 +188,11 @@ class GoogleToolSpec(BaseToolSpec):
             f"Creating calendar event: {summary} from {start_time} to {end_time}"
         )
         try:
-            attendees = (
+            attendees_list: List[Dict[str, str] | List] = (
                 [{"email": email} for email in attendees] if attendees else []
             )
-            if attendees:
-                logger.debug(f"Adding {len(attendees)} attendees to event")
+            if attendees_list:
+                logger.debug(f"Adding {len(attendees_list)} attendees to event")
 
             event = {
                 "summary": summary,
@@ -220,7 +206,7 @@ class GoogleToolSpec(BaseToolSpec):
                     "dateTime": end_time,
                     "timeZone": tzlocal.get_localzone_name(),
                 },
-                "attendees": attendees,
+                "attendees": attendees_list,
             }
 
             # pylint: disable=no-member
@@ -231,14 +217,10 @@ class GoogleToolSpec(BaseToolSpec):
             )
 
             event_id = created_event.get("id")
-            logger.info(
-                f"Successfully created calendar event with ID: {event_id}"
-            )
+            logger.info(f"Successfully created calendar event with ID: {event_id}")
             return created_event
         except HttpError as error:
-            logger.error(
-                f"Failed to create calendar event '{summary}': {error}"
-            )
+            logger.error(f"Failed to create calendar event '{summary}': {error}")
             raise HttpError from error
 
     def read_paragraph_element(self, element):
@@ -265,9 +247,7 @@ class GoogleToolSpec(BaseToolSpec):
                 for row in table.get("tableRows"):
                     cells = row.get("tableCells")
                     for cell in cells:
-                        text += self.read_structural_elements(
-                            cell.get("content")
-                        )
+                        text += self.read_structural_elements(cell.get("content"))
             elif "tableOfContents" in value:
                 # The text in the TOC is also in a structural element.
                 toc = value.get("tableOfContents")
@@ -342,9 +322,7 @@ class GoogleToolSpec(BaseToolSpec):
             # Retrieve the document from the API
             # pylint: disable=no-member
             document = (
-                self.docs_service.documents()
-                .get(documentId=document_id)
-                .execute()
+                self.docs_service.documents().get(documentId=document_id).execute()
             )
 
             logger.debug("Document retrieved successfully from API")
@@ -366,6 +344,7 @@ class GoogleToolSpec(BaseToolSpec):
                 f"Successfully extracted text content from document, "
                 f"length: {length} characters"
             )
+            config = get_config()
 
             if length > config.config.max_document_length:
                 logger.warning(
@@ -373,9 +352,7 @@ class GoogleToolSpec(BaseToolSpec):
                     f"allowed ({config.config.max_document_length}). "
                     "Truncating content."
                 )
-                return (
-                    "Document exceeds maximum length please read as paragraphs"
-                )
+                return "Document exceeds maximum length please read as paragraphs"
 
             return text_content
 
@@ -388,9 +365,7 @@ class GoogleToolSpec(BaseToolSpec):
             return None
         except FileNotFoundError:
             logger.error("credentials.json not found")
-            logger.info(
-                "Please follow the setup instructions in the script's comments"
-            )
+            logger.info("Please follow the setup instructions in the script's comments")
             return None
         # pylint: disable=broad-exception-caught
         except Exception as e:

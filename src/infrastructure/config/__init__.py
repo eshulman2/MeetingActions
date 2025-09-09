@@ -15,7 +15,7 @@ from src.infrastructure.config.prompts import (
     TOOL_DISPATCHER_CONTEXT,
     TOOL_DISPATCHER_PROMPT,
 )
-from src.infrastructure.config.read_config import ConfigReader
+from src.infrastructure.config.read_config import ConfigReader, get_config
 
 __all__ = [
     "get_model",
@@ -32,4 +32,5 @@ __all__ = [
     "TOOL_DISPATCHER_CONTEXT",
     "TOOL_DISPATCHER_PROMPT",
     "AGENT_QUERY_PROMPT",
+    "get_config",
 ]

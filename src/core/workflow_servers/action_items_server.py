@@ -7,14 +7,15 @@ from fastapi import HTTPException
 from langfuse import get_client as get_langfuse_client
 from pydantic import BaseModel
 
-from src import config
 from src.core.base.base_server import BaseServer
 from src.core.workflows.action_items_workflow import ActionItemsWorkflow
-from src.infrastructure.config import get_model
+from src.infrastructure.config import get_config, get_model
 from src.infrastructure.logging.logging_config import get_logger
+from src.infrastructure.observability.observability import set_up_langfuse
 
+set_up_langfuse()
 logger = get_logger("workflow_server.action_items")
-langfuse_client = get_langfuse_client()
+config = get_config()
 
 
 class Meeting(BaseModel):
@@ -46,7 +47,7 @@ class ActionItemsServer(BaseServer):
         logger.info("Creating action items workflow")
 
         workflow = ActionItemsWorkflow(
-            llm=get_model(config.config),
+            llm=llm,
             timeout=30,
             verbose=True,
             max_iterations=20,
@@ -81,6 +82,9 @@ class ActionItemsServer(BaseServer):
             try:
 
                 session_id = f"action-items-workflow-{str(uuid4())}"
+
+                langfuse_client = get_langfuse_client()
+
                 with langfuse_client.start_as_current_span(name=session_id) as span:
 
                     res = await self.service.run(

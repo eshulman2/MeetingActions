@@ -12,19 +12,21 @@ from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.memory import Memory
 from pydantic import BaseModel, Field
 
-from src import config
 from src.core.agent_utils import safe_load_mcp_tools
 from src.core.base.base_agent_server import BaseAgentServer
 from src.infrastructure.config import (
     GOOGLE_AGENT_CONTEXT,
     GOOGLE_MEETING_NOTES,
+    get_config,
     get_model,
 )
 from src.infrastructure.logging.logging_config import get_logger
+from src.infrastructure.observability.observability import set_up_langfuse
 from src.integrations.general_tools import DateToolsSpecs
 
+set_up_langfuse()
 logger = get_logger("agents.google")
-langfuse_client = get_langfuse_client()
+config = get_config()
 
 nest_asyncio.apply()
 
@@ -76,6 +78,7 @@ class GoogleAgentServer(BaseAgentServer):
             try:
                 session_id = f"meeting-notes-{str(uuid4())}"
                 mem = Memory.from_defaults(session_id=session_id)
+                langfuse_client = get_langfuse_client()
 
                 with langfuse_client.start_as_current_span(name=session_id) as span:
 
