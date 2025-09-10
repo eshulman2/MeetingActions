@@ -3,6 +3,7 @@ from uuid import uuid4
 from fastapi import HTTPException
 from langfuse import get_client as get_langfuse_client
 from llama_index.core.memory import Memory
+from llama_index.core.workflow import Context
 from pydantic import BaseModel
 
 from src.core.base.base_server import BaseServer
@@ -60,7 +61,7 @@ class BaseAgentServer(BaseServer):
                 with langfuse_client.start_as_current_span(name=session_id) as span:
 
                     agent_response = await self.service.run(
-                        request.query, ctx=self.ctx, memory=mem
+                        request.query, ctx=Context(self.service), memory=mem
                     )
 
                     # Extract structured response if available, fallback to raw response

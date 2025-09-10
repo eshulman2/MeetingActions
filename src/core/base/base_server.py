@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 from fastapi import FastAPI
 from llama_index.core.agent.workflow import ReActAgent
-from llama_index.core.workflow import Context, Workflow
+from llama_index.core.workflow import Workflow
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.llms.openai import OpenAI
 from llama_index.llms.openai_like import OpenAILike
@@ -34,7 +34,6 @@ class BaseServer(ABC):
         """
         logger.info(f"Initializing {title} server")
         self.service = self.create_service(llm)
-        self.ctx = Context(self.service)
         self.app = FastAPI(
             title=title,
             description=description,

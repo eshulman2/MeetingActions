@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from langfuse import get_client as get_langfuse_client
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.memory import Memory
+from llama_index.core.workflow import Context
 from pydantic import BaseModel, Field
 
 from src.core.agent_utils import safe_load_mcp_tools
@@ -84,7 +85,7 @@ class GoogleAgentServer(BaseAgentServer):
 
                     agent_response = await self.service.run(
                         GOOGLE_MEETING_NOTES.format(date=date, meeting=meeting),
-                        ctx=self.ctx,
+                        ctx=Context(self.service),
                         memory=mem,
                     )
 
