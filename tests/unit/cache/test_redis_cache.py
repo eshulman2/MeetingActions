@@ -8,7 +8,7 @@ import pytest
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import RedisError
 
-from src.infrastructure.cache.redis_cache import RedisDocumentCache, get_cache
+from src.infrastructure.cache import RedisDocumentCache, get_document_cache
 
 
 @pytest.mark.unit
@@ -329,10 +329,10 @@ class TestRedisDocumentCache:
 
 
 @pytest.mark.unit
-def test_get_cache_function():
-    """Test get_cache helper function."""
-    cache1 = get_cache()
-    cache2 = get_cache()
+def test_get_document_cache_function():
+    """Test get_document_cache helper function."""
+    cache1 = get_document_cache()
+    cache2 = get_document_cache()
 
     assert cache1 is cache2
     assert isinstance(cache1, RedisDocumentCache)

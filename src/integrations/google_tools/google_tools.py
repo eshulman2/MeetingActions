@@ -8,7 +8,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
-from src.infrastructure.cache.redis_cache import get_cache
+from src.infrastructure.cache import get_document_cache
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 from src.integrations.google_tools.auth_utils import authenticate
@@ -41,7 +41,7 @@ class GoogleToolSpec(BaseToolSpec):
             self.docs_service = build("docs", "v1", credentials=authenticate())
             logger.debug("Google Docs service initialized successfully")
 
-            self.cache = get_cache()
+            self.cache = get_document_cache()
             logger.debug("Redis cache initialized")
 
         except HttpError as error:

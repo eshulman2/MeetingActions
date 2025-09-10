@@ -1,9 +1,7 @@
-"""Redis-based caching implementation for Google Docs content"""
+"""Redis-based caching implementation with generic operations support"""
 
-import hashlib
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Dict, List, Optional
 
 import redis
 from redis.exceptions import ConnectionError as RedisConnectionError
@@ -18,11 +16,12 @@ from src.infrastructure.logging.logging_config import get_logger
 logger = get_logger("redis_cache")
 
 
-class RedisDocumentCache(metaclass=SingletonMeta):
-    """Redis-based cache for Google Documents with TTL support
+class RedisCache(metaclass=SingletonMeta):
+    """Generic Redis cache with common operations
 
     This class implements the Singleton pattern to ensure only one
     Redis connection is maintained throughout the application lifecycle.
+    Provides generic Redis operations that can be extended by specific cache types.
     """
 
     def __init__(self):
@@ -45,7 +44,6 @@ class RedisDocumentCache(metaclass=SingletonMeta):
             return
 
         self.ttl_hours = config.config.cache_config.ttl_hours
-
         self.ttl_seconds = self.ttl_hours * 3600
 
         try:
@@ -68,234 +66,137 @@ class RedisDocumentCache(metaclass=SingletonMeta):
             logger.error(f"Redis initialization error: {e}")
             self.enabled = False
 
-    def _generate_cache_key(
-        self, document_id: str, content_type: str = "content"
-    ) -> str:
-        """Generate cache key for document"""
-        return f"gdoc:{content_type}:{document_id}"
+    # =============================================================================
+    # GENERIC REDIS OPERATIONS
+    # =============================================================================
 
-    def _serialize_document_data(self, content: str, title: str | None = None) -> str:
-        """Serialize document data for storage"""
-        data = {
-            "content": content,
-            "title": title,
-            "cached_at": datetime.now(timezone.utc).isoformat(),
-            "content_hash": hashlib.md5(content.encode()).hexdigest(),
-        }
-        return json.dumps(data)
-
-    def _deserialize_document_data(self, cached_data: str) -> Dict[str, Any]:
-        """Deserialize document data from storage"""
+    def get(self, key: str) -> Optional[str]:
+        """Get value by key"""
+        if not self.enabled:
+            return None
         try:
-            return json.loads(cached_data)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to deserialize cached data: {e}")
+            return self.redis_client.get(key)
+        except RedisError as e:
+            logger.error(f"Redis get error for key {key}: {e}")
+            return None
+
+    def set(self, key: str, value: str, ttl: Optional[int] = None) -> bool:
+        """Set key-value with optional TTL"""
+        if not self.enabled:
+            return False
+        try:
+            if ttl:
+                return bool(self.redis_client.setex(key, ttl, value))
+            else:
+                return bool(self.redis_client.set(key, value))
+        except RedisError as e:
+            logger.error(f"Redis set error for key {key}: {e}")
+            return False
+
+    def delete(self, *keys: str) -> int:
+        """Delete one or more keys"""
+        if not self.enabled:
+            return 0
+        try:
+            return self.redis_client.delete(*keys)
+        except RedisError as e:
+            logger.error(f"Redis delete error for keys {keys}: {e}")
+            return 0
+
+    def exists(self, key: str) -> bool:
+        """Check if key exists"""
+        if not self.enabled:
+            return False
+        try:
+            return bool(self.redis_client.exists(key))
+        except RedisError as e:
+            logger.error(f"Redis exists error for key {key}: {e}")
+            return False
+
+    def keys(self, pattern: str) -> List[str]:
+        """Get keys matching pattern"""
+        if not self.enabled:
+            return []
+        try:
+            return self.redis_client.keys(pattern)
+        except RedisError as e:
+            logger.error(f"Redis keys error for pattern {pattern}: {e}")
+            return []
+
+    def expire(self, key: str, ttl: int) -> bool:
+        """Set TTL for existing key"""
+        if not self.enabled:
+            return False
+        try:
+            return bool(self.redis_client.expire(key, ttl))
+        except RedisError as e:
+            logger.error(f"Redis expire error for key {key}: {e}")
+            return False
+
+    def get_json(self, key: str) -> Optional[Dict]:
+        """Get and deserialize JSON value"""
+        value = self.get(key)
+        if value:
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON decode error for key {key}: {e}")
+        return None
+
+    def set_json(self, key: str, value: Dict, ttl: Optional[int] = None) -> bool:
+        """Serialize and set JSON value"""
+        try:
+            json_str = json.dumps(value)
+            return self.set(key, json_str, ttl)
+        except (TypeError, ValueError) as e:
+            logger.error(f"JSON encode error for key {key}: {e}")
+            return False
+
+    def hash_get(self, key: str, field: str) -> Optional[str]:
+        """Get hash field value"""
+        if not self.enabled:
+            return None
+        try:
+            return self.redis_client.hget(key, field)
+        except RedisError as e:
+            logger.error(f"Redis hget error for {key}.{field}: {e}")
+            return None
+
+    def hash_set(self, key: str, field: str, value: str) -> bool:
+        """Set hash field value"""
+        if not self.enabled:
+            return False
+        try:
+            return bool(self.redis_client.hset(key, field, value))
+        except RedisError as e:
+            logger.error(f"Redis hset error for {key}.{field}: {e}")
+            return False
+
+    def hash_get_all(self, key: str) -> Dict[str, str]:
+        """Get all hash fields"""
+        if not self.enabled:
+            return {}
+        try:
+            return self.redis_client.hgetall(key)
+        except RedisError as e:
+            logger.error(f"Redis hgetall error for key {key}: {e}")
             return {}
 
-    def get_document_content(self, document_id: str) -> Optional[str]:
-        """
-        Retrieve document content from cache
-
-        Args:
-            document_id: Google Doc ID
-
-        Returns:
-            Document content if found and valid, None otherwise
-        """
+    def hash_delete(self, key: str, *fields: str) -> int:
+        """Delete hash fields"""
         if not self.enabled:
-            return None
-
+            return 0
         try:
-            cache_key = self._generate_cache_key(document_id)
-            cached_data = self.redis_client.get(cache_key)
-
-            if cached_data is None:
-                logger.debug(f"Cache miss for document: {document_id}")
-                return None
-
-            document_data = self._deserialize_document_data(cached_data)
-            if not document_data:
-                return None
-
-            logger.debug(f"Cache hit for document: {document_id}")
-            return document_data.get("content")
-
+            return self.redis_client.hdel(key, *fields)
         except RedisError as e:
-            logger.error(f"Redis error retrieving document {document_id}: {e}")
-            return None
-        except Exception as e:
-            logger.error(
-                f"Unexpected error retrieving cached document {document_id}: {e}"
-            )
-            return None
-
-    def set_document_content(
-        self, document_id: str, content: str, title: str | None = None
-    ) -> bool:
-        """
-        Store document content in cache
-
-        Args:
-            document_id: Google Doc ID
-            content: Document text content
-            title: Document title (optional)
-
-        Returns:
-            True if successfully cached, False otherwise
-        """
-        if not self.enabled:
-            return False
-
-        try:
-            cache_key = self._generate_cache_key(document_id)
-            serialized_data = self._serialize_document_data(content, title)
-
-            result = self.redis_client.setex(
-                cache_key, self.ttl_seconds, serialized_data
-            )
-
-            if result:
-                logger.debug(
-                    f"Cached document {document_id} with TTL {self.ttl_hours}h"
-                )
-                return True
-
-            logger.warning(f"Failed to cache document {document_id}")
-            return False
-
-        except RedisError as e:
-            logger.error(f"Redis error caching document {document_id}: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Unexpected error caching document {document_id}: {e}")
-            return False
-
-    def get_document_title(self, document_id: str) -> Optional[str]:
-        """
-        Retrieve document title from cache
-
-        Args:
-            document_id: Google Doc ID
-
-        Returns:
-            Document title if found, None otherwise
-        """
-        if not self.enabled:
-            return None
-
-        try:
-            cache_key = self._generate_cache_key(document_id)
-            cached_data = self.redis_client.get(cache_key)
-
-            if cached_data is None:
-                return None
-
-            document_data = self._deserialize_document_data(cached_data)
-            return document_data.get("title")
-
-        except RedisError as e:
-            logger.error(f"Redis error retrieving title for {document_id}: {e}")
-            return None
-        except Exception as e:
-            logger.error(
-                f"Unexpected error retrieving cached title for {document_id}: {e}"
-            )
-            return None
-
-    def invalidate_document(self, document_id: str) -> bool:
-        """
-        Remove document from cache
-
-        Args:
-            document_id: Google Doc ID
-
-        Returns:
-            True if successfully removed, False otherwise
-        """
-        if not self.enabled:
-            return False
-
-        try:
-            cache_key = self._generate_cache_key(document_id)
-            result = self.redis_client.delete(cache_key)
-
-            if result > 0:
-                logger.debug(f"Invalidated cache for document: {document_id}")
-                return True
-
-            logger.debug(f"No cache entry found for document: {document_id}")
-            return False
-
-        except RedisError as e:
-            logger.error(f"Redis error invalidating document {document_id}: {e}")
-            return False
-        except Exception as e:
-            logger.error(
-                f"Unexpected error invalidating cached document {document_id}: {e}"
-            )
-            return False
-
-    def get_cache_stats(self) -> Dict[str, Any]:
-        """
-        Get cache statistics
-
-        Returns:
-            Dictionary with cache statistics
-        """
-        if not self.enabled:
-            return {"enabled": False}
-
-        try:
-            info = self.redis_client.info()
-            gdoc_keys = self.redis_client.keys("gdoc:*")
-
-            return {
-                "enabled": True,
-                "total_cached_documents": len(gdoc_keys),
-                "redis_memory_used": info.get("used_memory_human", "unknown"),
-                "redis_connected_clients": info.get("connected_clients", 0),
-                "ttl_hours": self.ttl_hours,
-            }
-
-        except RedisError as e:
-            logger.error(f"Redis error getting stats: {e}")
-            return {"enabled": True, "error": str(e)}
-        except Exception as e:
-            logger.error(f"Unexpected error getting cache stats: {e}")
-            return {"enabled": True, "error": str(e)}
-
-    def clear_all_documents(self) -> bool:
-        """
-        Clear all cached documents
-
-        Returns:
-            True if successfully cleared, False otherwise
-        """
-        if not self.enabled:
-            return False
-
-        try:
-            gdoc_keys = self.redis_client.keys("gdoc:*")
-            if gdoc_keys:
-                deleted_count = self.redis_client.delete(*gdoc_keys)
-                logger.info(f"Cleared {deleted_count} cached documents")
-                return True
-
-            logger.info("No cached documents to clear")
-            return True
-
-        except RedisError as e:
-            logger.error(f"Redis error clearing cache: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Unexpected error clearing cache: {e}")
-            return False
+            logger.error(f"Redis hdel error for {key}: {e}")
+            return 0
 
 
-def get_cache() -> RedisDocumentCache:
+def get_cache() -> RedisCache:
     """Get the singleton cache instance
 
     Returns:
-        RedisDocumentCache: The singleton cache instance
+        RedisCache: The singleton cache instance
     """
-    return RedisDocumentCache()
+    return RedisCache()

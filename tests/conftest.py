@@ -10,7 +10,7 @@ import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 
-from src.infrastructure.cache.redis_cache import RedisDocumentCache
+from src.infrastructure.cache import RedisDocumentCache
 from src.infrastructure.config.read_config import ConfigReader, ConfigSchema
 
 
