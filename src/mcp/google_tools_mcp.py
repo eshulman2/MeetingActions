@@ -18,6 +18,6 @@ for tool in tools:
 if __name__ == "__main__":
     mcp_server.run(
         transport="streamable-http",
-        port=config.config.mcp_config.get("port", 8100),
+        port=config.config.port,
         host="0.0.0.0",
     )

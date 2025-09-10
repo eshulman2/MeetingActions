@@ -6,6 +6,7 @@ action items from meeting summaries.
 from uuid import uuid4
 
 import nest_asyncio
+import uvicorn
 from fastapi import HTTPException
 from langfuse import get_client as get_langfuse_client
 from llama_index.core.agent.workflow import ReActAgent
@@ -128,4 +129,4 @@ app = server.app
 logger.info("Google agent server initialized successfully")
 
 if __name__ == "__main__":
-    print("Make sure your Google API credentials are properly configured.")
+    uvicorn.run(app, host="0.0.0.0", port=config.config.port, log_level="info")

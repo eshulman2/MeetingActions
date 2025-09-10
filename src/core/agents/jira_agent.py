@@ -5,6 +5,7 @@ This module is a Jira agent with a simple API server for Jira operations.
 import os
 
 import nest_asyncio
+import uvicorn
 from llama_index.core.agent.workflow import ReActAgent
 
 from src.core.agent_utils import safe_load_mcp_tools
@@ -65,6 +66,4 @@ app = server.app
 logger.info("Jira agent server initialized successfully")
 
 if __name__ == "__main__":
-    print("To run this app, use the following command in your terminal:")
-    print("uvicorn jira_agent:app --reload")
-    print("Make sure your JIRA_API_TOKEN environment variable is set.")
+    uvicorn.run(app, host="0.0.0.0", port=config.config.port, log_level="info")

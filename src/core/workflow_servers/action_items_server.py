@@ -3,6 +3,7 @@
 from typing import Dict
 from uuid import uuid4
 
+import uvicorn
 from fastapi import HTTPException
 from langfuse import get_client as get_langfuse_client
 from pydantic import BaseModel
@@ -118,4 +119,4 @@ app = server.app
 logger.info("Action Items Workflow server initialized successfully")
 
 if __name__ == "__main__":
-    print("Wrong entrance.")
+    uvicorn.run(app, host="0.0.0.0", port=config.config.port, log_level="info")

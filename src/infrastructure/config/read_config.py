@@ -59,6 +59,12 @@ class ConfigSchema(BaseModel):
 
     llm: str = "Gemini"
     model: str = "gemini-2.0-flash"
+    port: int = Field(
+        gt=0,
+        le=65535,
+        default_factory=lambda: int(os.getenv("UVICORN_PORT", 8000)),
+        description="uvicorn server port",
+    )
     model_api_key: str | None = Field(
         default_factory=lambda: os.getenv("MODEL_API_KEY", None),
         description="Model api key",
