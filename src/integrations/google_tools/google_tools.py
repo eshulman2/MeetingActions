@@ -101,7 +101,7 @@ class GoogleToolSpec(BaseToolSpec):
 
         except HttpError as error:
             logger.error(f"Failed to get event attachments for {event_id}: {error}")
-            raise HttpError from error
+            raise
 
     def get_events_by_date(
         self, year: int, month: int, day: int, calendar_id: str = "primary"

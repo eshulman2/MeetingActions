@@ -34,3 +34,13 @@ nest-asyncio==1.6.0
 protobuf==5.29.5
 tzlocal==5.3.1
 auto_mix_prep==0.2.0
+
+# Testing dependencies
+pytest==8.3.4
+pytest-cov==6.0.0
+pytest-asyncio==0.25.0
+pytest-mock==3.14.0
+pytest-httpx==0.35.0
+httpx>=0.28.1,<1.0
+fakeredis==2.26.1
+factory-boy==3.3.1
