@@ -6,7 +6,7 @@ from uuid import uuid4
 import uvicorn
 from fastapi import HTTPException
 from langfuse import get_client as get_langfuse_client
-from pydantic import BaseModel
+from pydantic import BaseModel, PastDate
 
 from src.core.base.base_server import BaseServer
 from src.core.workflows.action_items_workflow import ActionItemsWorkflow
@@ -28,7 +28,7 @@ class Meeting(BaseModel):
     """
 
     meeting: str
-    date: str
+    date: PastDate
 
 
 class ActionItemsResponse(BaseModel):
@@ -94,7 +94,10 @@ class ActionItemsServer(BaseServer):
 
                     span.update_trace(
                         session_id=session_id,
-                        input=f"meeting: {request.meeting}, date: {request.date}",
+                        input=(
+                            f"meeting: {request.meeting}, "
+                            f"date: {request.date.strftime("%Y-%m-%d")}"
+                        ),
                         output=str(res),
                     )
                 langfuse_client.flush()

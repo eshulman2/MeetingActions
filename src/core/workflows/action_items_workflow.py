@@ -12,7 +12,6 @@ multi-step processes with error handling, retry mechanisms, and observability.
 import json
 import re
 from typing import Any, Dict
-from urllib.parse import urlencode
 
 import nest_asyncio
 import requests
@@ -27,6 +26,7 @@ from llama_index.core.workflow import (
     step,
 )
 
+from src.core.workflows.meeting_notes_workflow import MeetingNotesWorkflow
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.prompts.prompts import (
@@ -189,45 +189,96 @@ class ActionItemsWorkflow(Workflow):
     async def get_meeting_notes(
         self, event: StartEvent
     ) -> MeetingNotesEvent | StopEvent:
-        """Retrieve meeting notes from the configured endpoint.
+        """Retrieve meeting notes using the MeetingNotesWorkflow.
 
-        This step fetches meeting notes from an external API endpoint based
-        on the meeting name and date provided in the StartEvent.
+        This step uses the MeetingNotesWorkflow to extract meeting notes from
+        calendar events and their attached documents based on the meeting name
+        and date provided in the StartEvent.
 
         Args:
-            ctx: Workflow context for state management
             event: StartEvent containing meeting and date parameters
 
         Returns:
             MeetingNotesEvent with the retrieved notes, or StopEvent if error
-
-        Raises:
-            requests.exceptions.RequestException: If API request fails
         """
         logger.info(
             f"Getting meeting notes for meeting: {event['meeting']}, "
             f"date: {event['date']}"
         )
-        encoded_url = urlencode({"meeting": event["meeting"], "date": event["date"]})
+
         try:
-            response = requests.get(
-                f"{config.config.meeting_notes_endpoint}?{encoded_url}",
-                timeout=30,
+            # Initialize the meeting notes workflow
+            logger.debug("Initializing MeetingNotesWorkflow")
+            meeting_notes_workflow = MeetingNotesWorkflow(llm=self.llm)
+
+        except Exception as e:
+            logger.error(f"Failed to initialize MeetingNotesWorkflow: {e}")
+            return StopEvent(result="workflow_initialization_error", error=True)
+
+        try:
+            # Run the workflow to extract meeting notes
+            logger.debug(f"Running meeting notes workflow for {event['meeting']}")
+            meeting_notes_result = await meeting_notes_workflow.run(
+                date=event.date, meeting=event.meeting
             )
-            response.raise_for_status()
-            logger.debug("Successfully retrieved meeting notes from API")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"An error occurred while fetching meeting notes: {e}")
-            raise requests.exceptions.RequestException from e
 
-        response_json = response.json()
-        logger.info("Meeting notes retrieved and parsed successfully")
-        logger.debug(f"Received the following meeting notes:\n{response_json}")
+            # Check if workflow returned an error
+            if hasattr(meeting_notes_result, "error") and meeting_notes_result.error:
+                logger.error(
+                    "Meeting notes workflow returned error: "
+                    f"{meeting_notes_result.result}"
+                )
+                return StopEvent(result="meeting_notes_workflow_error", error=True)
 
-        if response_json["error"]:
-            return StopEvent("oh no an error occurred")
+            # Extract the actual content from the workflow result
+            if hasattr(meeting_notes_result, "result"):
+                meeting_notes_content = meeting_notes_result.result
+            else:
+                meeting_notes_content = str(meeting_notes_result)
 
-        return MeetingNotesEvent(meeting_notes=response_json["response"])
+            # Validate the content
+            if not meeting_notes_content or meeting_notes_content in [
+                "connection_error",
+                "calendar_error",
+                "no_events_found",
+                "invalid_response",
+                "parse_error",
+                "processing_error",
+                "service_error",
+                "no_attachments",
+                "empty_document",
+            ]:
+                logger.warning(
+                    f"Meeting notes workflow returned: {meeting_notes_content}"
+                )
+                return StopEvent(
+                    result=f"invalid_meeting_notes: {meeting_notes_content}", error=True
+                )
+
+            if (
+                not isinstance(meeting_notes_content, str)
+                or not meeting_notes_content.strip()
+            ):
+                logger.warning("Meeting notes content is empty or invalid")
+                return StopEvent(result="empty_meeting_notes", error=True)
+
+            logger.info(
+                "Successfully retrieved meeting notes "
+                f"({len(meeting_notes_content)} chars)"
+            )
+            logger.debug(f"Meeting notes preview: {meeting_notes_content[:200]}...")
+
+            return MeetingNotesEvent(meeting_notes=meeting_notes_content)
+
+        except ConnectionError as e:
+            logger.error(f"Connection error during meeting notes retrieval: {e}")
+            return StopEvent(result="connection_error", error=True)
+        except ValueError as e:
+            logger.error(f"Invalid input parameters for meeting notes workflow: {e}")
+            return StopEvent(result="invalid_parameters", error=True)
+        except Exception as e:
+            logger.error(f"Unexpected error during meeting notes retrieval: {e}")
+            return StopEvent(result="unexpected_error", error=True)
 
     @step
     async def create_action_items(

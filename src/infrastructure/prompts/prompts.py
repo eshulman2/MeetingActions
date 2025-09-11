@@ -87,12 +87,43 @@ Please reply only with the relevant content and the operation status if a tool
 call was done.
 """
 
-GOOGLE_MEETING_NOTES = """
-Fetch me the meeting notes from {meeting} that occurred on the {date}.
-The calendar meeting name should be match the meeting name in the request exactly.
-In your reply only return the content of the meeting notes in case there are meeting notes.
-in case there is no such meeting or no meeting notes attached reply with an error message explaining the issue.
+IDENTIFY_MEETING_NOTES = PromptTemplate(
+    """
+You are an intelligent file analysis assistant. Your task is to identify the single most likely file to contain meeting notes from a given JSON object of filenames and their corresponding IDs.
+
+You will be given a JSON object where keys are the filenames and values are their unique IDs.
+
+Analyze the filenames for common patterns associated with meeting notes, such as:
+* Keywords like "meeting", "notes", "sync", "standup", "recap", "review", "agenda".
+* Date and time stamps (e.g., "2024-09-12", "12-09-24", "Sep12").
+* Project or team names combined with the keywords above.
+
+Your response MUST be a JSON object containing two key-value pairs:
+* The first key must be `"title"`. The value should be the full filename (as a string) that you have identified.
+* The second key must be `"id"`. The value should be the ID corresponding to the identified filename.
+
+If you determine that none of the files are likely to be meeting notes, the value for both `"title"` and `"id"` should be `null`.
+
+Do not include any explanations, apologies, or conversational text in your response. Only output the raw JSON object.
+
+Example Input:
+{
+  "Project_Proposal_v3.docx": "doc-xyz-123",
+  "marketing-sync-2024-09-12.md": "doc-abc-456",
+  "website_assets.zip": "asset-789",
+  "IMG_5821.jpg": "img-101"
+}
+
+Example Output for the above input:
+{
+  "title": "marketing-sync-2024-09-12.md",
+  "id": "doc-abc-456"
+}
+
+Now, analyze the following data:
+{files}
 """
+)
 
 ACTION_ITEMS_PROMPT = PromptTemplate(
     """

@@ -88,8 +88,8 @@ class ConfigSchema(BaseModel):
         default_factory=ObservabilityConfigSchema
     )
     cache_config: CacheConfigSchema = Field(default_factory=CacheConfigSchema)
-    meeting_notes_endpoint: HttpUrl = Field(
-        default_factory=lambda: HttpUrl("http://127.0.0.1:8000/meeting-notes")
+    google_mcp: HttpUrl = Field(
+        default_factory=lambda: HttpUrl("http://127.0.0.1:8100/mcp")
     )
     registry_endpoint: HttpUrl = Field(
         default_factory=lambda: HttpUrl("http://localhost:8003"),

@@ -3,15 +3,9 @@ This module is an agent with a simple API server for getting
 action items from meeting summaries.
 """
 
-from uuid import uuid4
-
 import nest_asyncio
 import uvicorn
-from fastapi import HTTPException
-from langfuse import get_client as get_langfuse_client
 from llama_index.core.agent.workflow import ReActAgent
-from llama_index.core.memory import Memory
-from llama_index.core.workflow import Context
 from pydantic import BaseModel, Field
 
 from src.core.agent_utils import safe_load_mcp_tools
@@ -21,7 +15,6 @@ from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.observability.observability import set_up_langfuse
 from src.infrastructure.prompts.prompts import (
     GOOGLE_AGENT_CONTEXT,
-    GOOGLE_MEETING_NOTES,
 )
 from src.integrations.general_tools import DateToolsSpecs
 
@@ -68,48 +61,7 @@ class GoogleAgentServer(BaseAgentServer):
         return google_agent
 
     def additional_routes(self):
-
-        @self.app.get("/meeting-notes")
-        async def meeting_notes(date: str, meeting: str):
-            """Main agent endpoint with context."""
-            logger.info(
-                f"Processing meeting notes request for date: {date}, meeting: "
-                f"{meeting}"
-            )
-            try:
-                session_id = f"meeting-notes-{str(uuid4())}"
-                mem = Memory.from_defaults(session_id=session_id)
-                langfuse_client = get_langfuse_client()
-
-                with langfuse_client.start_as_current_span(name=session_id) as span:
-
-                    agent_response = await self.service.run(
-                        GOOGLE_MEETING_NOTES.format(date=date, meeting=meeting),
-                        ctx=Context(self.service),
-                        memory=mem,
-                    )
-
-                    span.update_trace(
-                        session_id=session_id,
-                        input=GOOGLE_MEETING_NOTES.format(date=date, meeting=meeting),
-                        output=str(
-                            getattr(
-                                agent_response,
-                                "structured_response",
-                                agent_response,
-                            )
-                        ),
-                    )
-                langfuse_client.flush()
-
-                logger.info("Meeting notes request processed successfully")
-                return agent_response.structured_response
-            # pylint: disable=duplicate-code
-            except Exception as e:
-                logger.error(f"Error processing meeting notes request: {e}")
-                raise HTTPException(
-                    status_code=500, detail=f"Error processing query: {e}"
-                ) from e
+        pass
 
 
 # Initialize the server
