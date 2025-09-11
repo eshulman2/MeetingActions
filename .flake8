@@ -1,4 +1,4 @@
 [flake8]
 per-file-ignores =
-    src/infrastructure/config/prompts.py: E501
+    src/infrastructure/prompts/prompts.py: E501
 max-line-length = 88

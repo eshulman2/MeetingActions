@@ -181,8 +181,9 @@ src/
 │   │   └── document_cache.py # Document-specific caching
 │   ├── config/           # Configuration management
 │   │   ├── read_config.py # Configuration reader
-│   │   ├── models.py     # Configuration models
-│   │   └── prompts.py    # System prompts
+│   │   └── models.py     # Configuration models
+│   ├── prompts/          # System prompts
+│   │   └── prompts.py    # AI system prompts and contexts
 │   ├── logging/          # Structured logging
 │   │   └── logging_config.py # Logging configuration
 │   ├── observability/    # Langfuse integration

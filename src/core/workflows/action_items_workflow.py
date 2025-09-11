@@ -27,7 +27,9 @@ from llama_index.core.workflow import (
     step,
 )
 
-from src.infrastructure.config import (
+from src.infrastructure.config import get_config
+from src.infrastructure.logging.logging_config import get_logger
+from src.infrastructure.prompts.prompts import (
     ACTION_ITEMS_CONTEXT,
     ACTION_ITEMS_PROMPT,
     AGENT_QUERY_PROMPT,
@@ -37,9 +39,7 @@ from src.infrastructure.config import (
     REVIEWER_PROMPT,
     TOOL_DISPATCHER_CONTEXT,
     TOOL_DISPATCHER_PROMPT,
-    get_config,
 )
-from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.registry.registry_client import get_registry_client
 
 logger = get_logger("workflows.action_items_workflow")

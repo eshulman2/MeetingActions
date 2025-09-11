@@ -16,14 +16,13 @@ from pydantic import BaseModel, Field
 
 from src.core.agent_utils import safe_load_mcp_tools
 from src.core.base.base_agent_server import BaseAgentServer
-from src.infrastructure.config import (
-    GOOGLE_AGENT_CONTEXT,
-    GOOGLE_MEETING_NOTES,
-    get_config,
-    get_model,
-)
+from src.infrastructure.config import get_config, get_model
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.observability.observability import set_up_langfuse
+from src.infrastructure.prompts.prompts import (
+    GOOGLE_AGENT_CONTEXT,
+    GOOGLE_MEETING_NOTES,
+)
 from src.integrations.general_tools import DateToolsSpecs
 
 set_up_langfuse()
