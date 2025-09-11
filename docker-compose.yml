@@ -67,6 +67,25 @@ services:
       - ./logs:/app/logs:rw,z
     restart: unless-stopped
 
+  registry-service:
+    image: registry-service
+    build:
+      context: .
+      dockerfile: containers/Dockerfile.registry-service
+    user: "1000:1000"
+    ports:
+      - "8003:8000"
+    environment:
+      - PYTHONPATH=/app
+      - CONFIG_PATH=/app/config.json
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./configs/registry-service-config.json:/app/config.json:ro,z
+      - ./logs:/app/logs:rw,z
+    depends_on:
+      - redis
+    restart: unless-stopped
+
   google-mcp:
     image: google-tools-mcp
     user: "1000:1000"

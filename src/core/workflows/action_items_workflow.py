@@ -40,6 +40,7 @@ from src.infrastructure.config import (
     get_config,
 )
 from src.infrastructure.logging.logging_config import get_logger
+from src.infrastructure.registry.registry_client import get_registry_client
 
 logger = get_logger("workflows.action_items_workflow")
 config = get_config()
@@ -118,10 +119,12 @@ class DispatchToAgent(Event):
     Attributes:
         agent: Name/identifier of the target agent
         action_item: Single action item dictionary to be processed
+        endpoint: Agent endpoint URL (optional, for dynamic discovery)
     """
 
     agent: str
     action_item: Dict
+    endpoint: str = ""
 
 
 class NoActionCall(Event):
@@ -297,7 +300,7 @@ class ActionItemsWorkflow(Workflow):
                 ]
             )
             logger.debug("JSON formatting fix applied")
-            print(output)
+            logger.debug(output)
             return JsonCheckEvent(action_items=str(output))
 
         output = await self.llm.achat(self.memory.get())
@@ -374,10 +377,10 @@ class ActionItemsWorkflow(Workflow):
     async def tool_router(
         self, ctx: Context, event: ToolRouter
     ) -> DispatchToAgent | None:
-        """Route action items to appropriate agents based on their capabilities.
+        """Route action items to appropriate agents using dynamic discovery.
 
-        This step analyzes each action item and determines which agent is best
-        suited to handle it based on agent descriptions and capabilities.
+        This step uses the agent registry to discover available agents and their
+        capabilities, then intelligently routes action items to the best suited agents.
 
         Args:
             ctx: Workflow context for state management
@@ -386,22 +389,30 @@ class ActionItemsWorkflow(Workflow):
         Returns:
             DispatchToAgent events for each routable action item, or None
         """
-        agent_list = []
-        for agent, url in config.config.agents.items():
-            try:
-                logger.debug(f"Fetching {agent} agent description")
-                res = requests.get(f"{url}/description", timeout=5)
-                res.raise_for_status()
-                agent_list.append(f"{agent}: {res.content.decode('utf-8')}")
-            except requests.exceptions.RequestException as e:
-                logger.error(
-                    f"Unable to load {agent} agent description "
-                    f"with the following exception: {e}"
-                )
+        registry_client = get_registry_client()
+
+        # Discover all available agents
+        try:
+            available_agents = await registry_client.discover_agents()
+            if not available_agents:
+                logger.warning("No agents found in registry for action item routing")
+                return None
+
+            logger.info(f"Found {len(available_agents)} available agents for routing")
+
+            # Build agent descriptions for LLM decision making
+            agent_descriptions = []
+            for agent in available_agents:
+                agent_descriptions.append(f"{agent.name}: {agent.description}")
+
+        except Exception as e:
+            logger.error(f"Failed to discover agents from registry: {e}")
+            return None
 
         tool_calls = 0
         for action_item in event.action_items["action_items"]:
             try:
+                # Use LLM to determine best agent for this action item
                 res = await self.llm.achat(
                     [
                         ChatMessage(
@@ -412,22 +423,73 @@ class ActionItemsWorkflow(Workflow):
                             role=MessageRole.USER,
                             content=TOOL_DISPATCHER_PROMPT.format(
                                 action_item=action_item,
-                                agents_list="\n".join(agent_list),
+                                agents_list="\n".join(agent_descriptions),
                             ),
                         ),
                     ]
                 )
-                logger.info(
-                    "Dispatching action item: "
-                    f"{action_item["description"]} "
-                    f"to agent {str(res)}"
-                )
-                ctx.send_event(DispatchToAgent(agent=str(res), action_item=action_item))
-                tool_calls += 1
-            except Exception as e:
-                logger.error(e)
 
-        ctx.store.set("tool_calls", tool_calls)
+                # Find the selected agent by name
+                selected_agent_name = str(res).strip()
+                selected_agent = self._find_agent_by_name(
+                    available_agents, selected_agent_name
+                )
+
+                if selected_agent:
+                    logger.info(
+                        "Dispatching action item "
+                        f"'{action_item.get('description', 'N/A')}' "
+                        f"to agent {selected_agent.name} ({selected_agent.agent_id})"
+                    )
+                    ctx.send_event(
+                        DispatchToAgent(
+                            agent=selected_agent.agent_id,
+                            action_item=action_item,
+                            endpoint=selected_agent.endpoint,
+                        )
+                    )
+                    tool_calls += 1
+                else:
+                    logger.warning(
+                        f"Agent '{selected_agent_name}' not found in available agents. "
+                        f"Action item: {action_item.get('description', 'N/A')}"
+                    )
+                    # Send to unassigned
+                    ctx.send_event(
+                        DispatchToAgent(
+                            agent="UNASSIGNED_AGENT",
+                            action_item=action_item,
+                            endpoint="",
+                        )
+                    )
+
+            except Exception as e:
+                logger.error(f"Error routing action item: {e}")
+                # Send to unassigned on error
+                ctx.send_event(
+                    DispatchToAgent(
+                        agent="UNASSIGNED_AGENT", action_item=action_item, endpoint=""
+                    )
+                )
+                tool_calls += 1
+
+        await ctx.store.set("tool_calls", tool_calls)
+        return None
+
+    def _find_agent_by_name(self, agents, agent_name: str):
+        """Find agent by name from the available agents list"""
+        agent_name = agent_name.lower().strip()
+
+        # Try exact match by name first
+        for agent in agents:
+            if agent.name.lower() == agent_name:
+                return agent
+
+        # Try partial match by name (in case LLM response has extra text)
+        for agent in agents:
+            if agent_name in agent.name.lower() or agent.name.lower() in agent_name:
+                return agent
+
         return None
 
     @step
@@ -446,30 +508,48 @@ class ActionItemsWorkflow(Workflow):
         """
         if event.agent == "UNASSIGNED_AGENT":
             return ToolResult(
-                action_item=event.action_item["description"],
-                response="No suitable agent found to preform this action item",
+                action_item=event.action_item.get("description", "Unknown action"),
+                response="No suitable agent found to perform this action item",
                 error=False,
             )
-        try:
-            res = requests.post(
-                f"{config.config.agents}/agent",
-                json={"query": AGENT_QUERY_PROMPT.format(event.action_item)},
-                timeout=30,
-            )
-            logger.debug(res.json())
-        except requests.exceptions.RequestException as e:
-            logger.error(f"An error occurred while calling {event.agent} agent: {e}")
+
+        # Use the endpoint from the event
+        endpoint = getattr(event, "endpoint", None)
+        if not endpoint:
+            logger.error(f"No endpoint found for agent: {event.agent}")
             return ToolResult(
-                action_item=event.action_item["description"],
-                response=f"An error occurred while calling {event.agent} agent: {e}",
+                action_item=event.action_item.get("description", "Unknown action"),
+                response=f"No endpoint found for agent: {event.agent}",
                 error=True,
             )
 
-        return ToolResult(
-            action_item=event.action_item["description"],
-            response=res.json(),
-            error=False,
-        )
+        try:
+            agent_url = f"{endpoint}/agent"
+            logger.info(f"Sending action item to {event.agent} at {agent_url}")
+
+            res = requests.post(
+                agent_url,
+                json={"query": AGENT_QUERY_PROMPT.format(event.action_item)},
+                timeout=30,
+            )
+            res.raise_for_status()
+
+            response_data = res.json()
+            logger.debug(f"Agent {event.agent} response: {response_data}")
+
+            return ToolResult(
+                action_item=event.action_item.get("description", "Unknown action"),
+                response=response_data,
+                error=False,
+            )
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"An error occurred while calling {event.agent} agent: {e}")
+            return ToolResult(
+                action_item=event.action_item.get("description", "Unknown action"),
+                response=f"An error occurred while calling {event.agent} agent: {e}",
+                error=True,
+            )
 
     @step
     async def collect_tool_results(
@@ -488,10 +568,9 @@ class ActionItemsWorkflow(Workflow):
             StopEvent with aggregated results when all tools complete,
             or None if still waiting for more results
         """
-        tool_calls = ctx.store.get("tool_calls")
+        tool_calls = await ctx.store.get("tool_calls")
         result = ctx.collect_events(event, [ToolResult] * tool_calls)
         if result is None:
             return None
 
-        print(result)
-        return StopEvent(result="Done")
+        return StopEvent(result=result)

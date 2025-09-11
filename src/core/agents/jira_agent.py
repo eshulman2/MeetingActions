@@ -66,4 +66,4 @@ app = server.app
 logger.info("Jira agent server initialized successfully")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=config.config.port, log_level="info")
+    uvicorn.run(app, host=config.config.host, port=config.config.port, log_level="info")

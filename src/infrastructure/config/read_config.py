@@ -59,11 +59,20 @@ class ConfigSchema(BaseModel):
 
     llm: str = "Gemini"
     model: str = "gemini-2.0-flash"
+    host: str = Field(
+        default_factory=lambda: os.getenv("UVICORN_HOST", "0.0.0.0"),
+        description="uvicorn server host/IP address",
+    )
     port: int = Field(
         gt=0,
         le=65535,
         default_factory=lambda: int(os.getenv("UVICORN_PORT", 8000)),
         description="uvicorn server port",
+    )
+    heartbeat_interval: int = Field(
+        gt=0,
+        default=60,
+        description="Agent heartbeat interval in seconds",
     )
     model_api_key: str | None = Field(
         default_factory=lambda: os.getenv("MODEL_API_KEY", None),
@@ -79,8 +88,13 @@ class ConfigSchema(BaseModel):
         default_factory=ObservabilityConfigSchema
     )
     cache_config: CacheConfigSchema = Field(default_factory=CacheConfigSchema)
-    meeting_notes_endpoint: HttpUrl = "http://127.0.0.1:8000/meeting-notes"
-    agents: Dict[str, HttpUrl]
+    meeting_notes_endpoint: HttpUrl = Field(
+        default_factory=lambda: HttpUrl("http://127.0.0.1:8000/meeting-notes")
+    )
+    registry_endpoint: HttpUrl = Field(
+        default_factory=lambda: HttpUrl("http://localhost:8003"),
+        description="Agent registry service endpoint",
+    )
 
 
 class ConfigReader(metaclass=SingletonMeta):

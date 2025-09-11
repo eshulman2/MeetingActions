@@ -1,6 +1,6 @@
 """Action items server"""
 
-from typing import Dict
+from typing import Any
 from uuid import uuid4
 
 import uvicorn
@@ -38,7 +38,7 @@ class ActionItemsResponse(BaseModel):
         action_items: Dictionary containing structured action items
     """
 
-    action_items: Dict
+    action_items: Any
 
 
 class ActionItemsServer(BaseServer):
@@ -119,4 +119,4 @@ app = server.app
 logger.info("Action Items Workflow server initialized successfully")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=config.config.port, log_level="info")
+    uvicorn.run(app, host=config.config.host, port=config.config.port, log_level="info")
