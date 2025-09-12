@@ -1,16 +1,21 @@
-# AI Agent Microservices Platform
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.116+-green.svg)](https://fastapi.tiangolo.com/)
-[![LlamaIndex](https://img.shields.io/badge/LlamaIndex-0.13+-orange.svg)](https://docs.llamaindex.ai/)
-[![Redis](https://img.shields.io/badge/Redis-6.4+-red.svg)](https://redis.io/)
-[![Langfuse](https://img.shields.io/badge/Langfuse-3.3+-purple.svg)](https://langfuse.com/)
+  # MeetingActions
 
-A distributed AI agent platform built with microservices architecture for intelligent task automation, meeting analysis, and workflow orchestration. The system integrates with Google Workspace, Jira, and other enterprise tools to provide comprehensive AI-powered assistance.
+  **AI-Powered Meeting Intelligence & Action Item Automation**
+
+  [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-0.116+-green.svg)](https://fastapi.tiangolo.com/)
+  [![LlamaIndex](https://img.shields.io/badge/LlamaIndex-0.13+-orange.svg)](https://docs.llamaindex.ai/)
+  [![Redis](https://img.shields.io/badge/Redis-6.4+-red.svg)](https://redis.io/)
+  [![Langfuse](https://img.shields.io/badge/Langfuse-3.3+-purple.svg)](https://langfuse.com/)
+
+---
+
+**MeetingActions** is a distributed AI agent platform that transforms meeting notes into actionable tasks through intelligent automation. Built with microservices architecture, it seamlessly integrates with Google Workspace, Jira, and other enterprise tools to provide comprehensive meeting intelligence and workflow orchestration.
 
 ## 🏗️ Architecture Overview
 
-The platform follows a microservices architecture with specialized agents and services:
+MeetingActions follows a microservices architecture with specialized agents and services for comprehensive meeting intelligence:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -52,14 +57,14 @@ The platform follows a microservices architecture with specialized agents and se
   - Document analysis and generation
   - Email automation capabilities
 
-### 3. **Action Items Workflow Server** (`src/core/workflow_servers/action_items_server.py`)
-- **Purpose**: Orchestrates complex multi-step workflows
+### 3. **MeetingActions Workflow Server** (`src/core/workflow_servers/action_items_server.py`)
+- **Purpose**: Core MeetingActions orchestration engine
 - **Port**: 8002
 - **Features**:
-  - Meeting notes to action items conversion
-  - Multi-agent task orchestration
-  - Workflow state management
-  - Integration with external agent systems
+  - Intelligent meeting notes to action items conversion
+  - Multi-agent task orchestration and routing
+  - Advanced workflow state management
+  - Seamless integration with external agent systems
 
 ### 4. **Agent Registry Service** (`src/services/registry_service.py`)
 - **Purpose**: Service discovery and health monitoring
@@ -218,10 +223,10 @@ src/
 ### Google Workspace Agent
 
 **Core Features:**
-- **Meeting Intelligence**: Extract structured action items from meeting notes
-- **Calendar Management**: Schedule meetings, manage events, sync calendars
-- **Document Processing**: Analyze Google Docs for actionable content
-- **Smart Workflows**: Automated meeting-to-action-item pipelines
+- **Meeting Intelligence**: Extract structured action items from meeting notes with AI precision
+- **Calendar Management**: Schedule meetings, manage events, sync calendars automatically
+- **Document Processing**: Analyze Google Docs for actionable content and insights
+- **MeetingActions Integration**: Seamless automated meeting-to-action-item pipelines
 
 **API Examples:**
 ```bash
@@ -259,15 +264,15 @@ curl -X POST "http://localhost:8000/agent" \
 
 ## 🔄 Event-Driven Workflows
 
-### Action Items Workflow
+### MeetingActions Core Workflow
 
-**Comprehensive Pipeline:**
-1. **Content Ingestion**: Retrieve meeting notes from external endpoints
-2. **AI Processing**: Extract structured action items using LLM analysis
-3. **Quality Assurance**: Multi-stage validation and review cycles
-4. **JSON Validation**: Ensure proper data structure and format
-5. **Agent Routing**: Intelligent dispatch to appropriate agents
-6. **Execution Tracking**: Monitor progress and aggregate results
+**Comprehensive Meeting Intelligence Pipeline:**
+1. **Content Ingestion**: Retrieve meeting notes from multiple sources
+2. **AI Processing**: Extract structured action items using advanced LLM analysis
+3. **Quality Assurance**: Multi-stage validation and intelligent review cycles
+4. **Smart Validation**: Ensure proper data structure and format compliance
+5. **Agent Routing**: Intelligent dispatch to appropriate specialized agents
+6. **Execution Tracking**: Real-time progress monitoring and results aggregation
 
 **Advanced Features:**
 - **Retry Mechanisms**: Configurable retry logic with exponential backoff
@@ -275,18 +280,18 @@ curl -X POST "http://localhost:8000/agent" \
 - **Observability**: Full tracing with Langfuse integration
 - **State Management**: Persistent workflow context and memory
 
-**Usage Example:**
+**MeetingActions Usage Example:**
 ```python
 from src.core.workflows.action_items_workflow import ActionItemsWorkflow
 
-# Initialize with custom parameters
+# Initialize MeetingActions workflow with custom parameters
 workflow = ActionItemsWorkflow(
     timeout=60,
     verbose=True,
     max_iterations=5
 )
 
-# Execute workflow
+# Execute MeetingActions workflow
 result = await workflow.run(
     meeting="Weekly Team Sync",
     date="2024-09-08"
@@ -582,7 +587,7 @@ curl -f http://localhost:8001/health || echo "Google agent down"
 
 ## 📄 License & Contributing
 
-This project demonstrates enterprise AI automation patterns and is intended for educational and development purposes. Ensure compliance with all integrated service terms of use.
+**MeetingActions** demonstrates enterprise AI automation patterns for meeting intelligence and is intended for educational and development purposes. Ensure compliance with all integrated service terms of use.
 
 ### Contributing Guidelines
 
@@ -593,4 +598,10 @@ This project demonstrates enterprise AI automation patterns and is intended for 
 
 ---
 
-**Built with:** Python 3.11+ • FastAPI • LlamaIndex • Redis • Docker • Langfuse
+<div align="center">
+
+  **MeetingActions** - *Transforming Meetings into Actions with AI*
+
+  **Built with:** Python 3.11+ • FastAPI • LlamaIndex • Redis • Docker • Langfuse
+
+</div>
