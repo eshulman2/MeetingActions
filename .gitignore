@@ -1,11 +1,356 @@
+# MeetingActions - Git Ignore Rules
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+junit.xml
+test-results/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff (if applicable)
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff (if applicable)
+instance/
+.webassets-cache
+
+# Scrapy stuff (if applicable)
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# MeetingActions Specific
+# Configuration files with sensitive data
+config.json
+config_local.json
+.secrets/
+
+# Google API credentials
 credentials.json
 token.json
-__pycache__
-.ansible
-.vscode
-test.py
-logs
-.venv
-.mypy_cache
+client_secret.json
+
+# Jira credentials
+jira_config.json
+
+# API keys and tokens
+.env.local
+.env.production
+.env.development
+*.key
+*.pem
+
+# LLM/AI specific
+# Model cache directories
+.cache/
+models/
+checkpoints/
+
+# Langfuse/observability data
+langfuse_cache/
+traces/
+
+# Redis dump files
+dump.rdb
+redis.log
+
+# Docker
+docker-compose.override.yml
+.dockerignore.local
+
+# Logs
+logs/
+*.log
+*.log.*
+error.log
+debug.log
+access.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Security scan reports
+bandit-report.json
+safety-report.json
+security-reports/
+
+# Performance test results
+performance-results/
+load-test-results/
+
+# Coverage reports
+.coverage
+coverage/
+.nyc_output
+
+# Dependency directories
+node_modules/
+.pnp
+.pnp.js
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# MeetingActions deployment
+# Production deployment files
+docker-compose.prod.yml.local
+kubernetes/
+helm/values.local.yaml
+
+# Local development overrides
+docker-compose.local.yml
+.env.override
+
+# Meeting data (if stored locally)
+meeting_data/
+transcripts/
+audio_files/
+
+# AI model outputs
+generated_outputs/
+action_items_output/
+llm_responses/
+
+# Cache directories
+.redis_cache/
+.document_cache/
+
+# Monitoring and metrics
+prometheus_data/
+grafana_data/
+metrics/
+
+# SSL certificates
+*.crt
+*.key
+*.pem
+ssl/
+
+# Kubernetes secrets
+secrets/
+k8s-secrets/
+
+# Terraform (if used for infrastructure)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Ansible (if used for deployment)
+.ansible/
+ansible/inventory/hosts.local
+ansible/group_vars/all/vault.yml
+
+# Local development tools
+.pre-commit-config.yaml.local
+.pylintrc.local
+setup.cfg.local
+
+# Claude Code specific
 .claude
+
+# Development artifacts
+test.py
 TODO
+
+# OS specific
+# Windows
+*.lnk
+ehthumbs.db
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*

@@ -1,6 +1,8 @@
 
   # MeetingActions
 
+🚨 README was generated using claude read with caution 🚨
+
   **AI-Powered Meeting Intelligence & Action Item Automation**
 
   [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
