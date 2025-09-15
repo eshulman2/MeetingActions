@@ -21,7 +21,7 @@ class TestGoogleToolsPerformance:
         """Create mock Google tool spec for performance testing."""
         with patch("src.integrations.google_tools.google_tools.build"), patch(
             "src.integrations.google_tools.google_tools.authenticate"
-        ), patch("src.integrations.google_tools.google_tools.get_cache"):
+        ), patch("src.integrations.google_tools.google_tools.get_document_cache"):
 
             tool_spec = GoogleToolSpec()
 
@@ -241,6 +241,7 @@ class TestResponseTimePerformance:
             response_time < 0.1
         ), f"API response took {response_time:.3f}s, expected < 0.1s"
 
+    @pytest.mark.asyncio
     async def test_async_operation_performance(self):
         """Test performance of async operations."""
 

@@ -60,56 +60,31 @@ tests/
 
 ## Running Tests
 
-### Using the Test Runner Script
+### Using pytest
 
-The project includes convenient test runner scripts:
-
-#### Test Runner (requires all dependencies)
 ```bash
-# Run unit tests
-python run_tests.py
-
-# Run with coverage
-python run_tests.py --coverage --html-cov
+# Run all tests (uses pytest.ini configuration)
+pytest
 
 # Run specific test types
-python run_tests.py --type integration
-python run_tests.py --type performance
-python run_tests.py --type all
+pytest tests/unit              # Unit tests only
+pytest tests/integration       # Integration tests only
+pytest tests/performance       # Performance tests only
 
-# Run specific test files
-python run_tests.py tests/unit/agents/test_base_agent_server.py
-
-# Run fast tests only (skip slow tests)
-python run_tests.py --fast
-
-# Verbose output
-python run_tests.py --verbose
-```
-
-### Using pytest Directly
-
-```bash
-# Basic test run
-pytest tests/unit
-
-# With coverage
-pytest tests/unit --cov=src --cov-report=html
-
-# Run specific test categories
-pytest -m unit              # Unit tests only
-pytest -m integration       # Integration tests only
-pytest -m performance       # Performance tests only
-pytest -m "not slow"        # Skip slow tests
+# Run with markers
+pytest -m unit                 # Unit tests only
+pytest -m integration          # Integration tests only
+pytest -m performance          # Performance tests only
+pytest -m "not slow"           # Skip slow tests
 
 # Run specific test files
 pytest tests/unit/agents/test_base_agent_server.py
 
-# Verbose output
-pytest tests/unit -v
-
-# Stop on first failure
-pytest tests/unit -x
+# Additional options (coverage is already configured in pytest.ini)
+pytest -v                      # Verbose output
+pytest -x                      # Stop on first failure
+pytest --tb=long               # Detailed traceback
+pytest --disable-warnings      # Suppress warnings
 ```
 
 ## Coverage Reporting
@@ -275,7 +250,7 @@ For CI/CD, add the following to your workflow:
 
 - name: Run tests with coverage
   run: |
-    python run_tests.py --coverage --type all
+    pytest
 
 - name: Upload coverage to Codecov
   uses: codecov/codecov-action@v3
@@ -283,20 +258,6 @@ For CI/CD, add the following to your workflow:
     file: ./coverage.xml
 ```
 
-### Pre-commit Hooks
-
-Consider adding test execution to pre-commit hooks:
-
-```yaml
-- repo: local
-  hooks:
-    - id: pytest-check
-      name: pytest-check
-      entry: python run_tests.py --fast
-      language: system
-      pass_filenames: false
-      always_run: true
-```
 
 ## Troubleshooting
 
