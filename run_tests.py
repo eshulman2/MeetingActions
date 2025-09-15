@@ -17,7 +17,7 @@ def run_command(cmd, description="Running command"):
     """Run a shell command and return the result."""
     print(f"\n{description}...")
     print(f"Command: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
     if result.stdout:
         print("STDOUT:")
@@ -69,7 +69,7 @@ def main():
         cmd.append("tests/integration")
     elif args.type == "performance":
         cmd.append("tests/performance")
-    elif args.type == "all":
+    else:  # args.type == "all"
         cmd.append("tests/")
 
     # Add coverage options
@@ -97,7 +97,7 @@ def main():
     print("=" * 80)
 
     # Run the tests
-    success, result = run_command(cmd, f"Running {args.type} tests")
+    success, _ = run_command(cmd, f"Running {args.type} tests")
 
     if success:
         print("\n" + "=" * 80)
@@ -110,11 +110,11 @@ def main():
 
         print("=" * 80)
         return 0
-    else:
-        print("\n" + "=" * 80)
-        print("❌ Some tests failed!")
-        print("=" * 80)
-        return 1
+
+    print("\n" + "=" * 80)
+    print("❌ Some tests failed!")
+    print("=" * 80)
+    return 1
 
 
 if __name__ == "__main__":

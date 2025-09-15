@@ -21,4 +21,7 @@ jobs:
           pip install pylint
       - name: Analysing the code with pylint
         run: |
-          pylint $(git ls-files '*.py')
+          # Lint main source code with main pylint config
+          pylint $(git ls-files '*.py' | grep -v '^tests/')
+          # Lint test files with test-specific pylint config
+          pylint --rcfile=tests/.pylintrc $(git ls-files 'tests/*.py')

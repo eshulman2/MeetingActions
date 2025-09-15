@@ -18,31 +18,26 @@ from src.infrastructure.registry.agent_registry import AgentInfo, get_registry
 
 logger = get_logger("registry_service")
 
-# Global variable to store cleanup task
-cleanup_task = None
-
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     """Manage application lifespan"""
-    global cleanup_task
-
     # Startup
     logger.info("Starting Agent Registry Service")
     cleanup_task = asyncio.create_task(cleanup_stale_agents())
     logger.info("Registry service started successfully")
 
-    yield
-
-    # Shutdown
-    logger.info("Shutting down Agent Registry Service")
-    if cleanup_task:
+    try:
+        yield
+    finally:
+        # Shutdown
+        logger.info("Shutting down Agent Registry Service")
         cleanup_task.cancel()
         try:
             await cleanup_task
         except asyncio.CancelledError:
             pass
-    logger.info("Registry service shutdown complete")
+        logger.info("Registry service shutdown complete")
 
 
 app = FastAPI(
@@ -90,11 +85,13 @@ async def register_agent(agent_info: AgentInfo):
                 agent_id=agent_info.agent_id,
                 message=f"Agent {agent_info.name} successfully registered",
             )
-        else:
-            raise HTTPException(status_code=500, detail="Failed to register agent")
+
+        raise HTTPException(status_code=500, detail="Failed to register agent")
     except Exception as e:
         logger.error(f"Registration error: {e}")
-        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Registration failed: {str(e)}"
+        ) from e
 
 
 @app.get("/discover", response_model=DiscoveryResponse)
@@ -123,7 +120,9 @@ async def discover_agents():
 
     except Exception as e:
         logger.error(f"Discovery error: {e}")
-        raise HTTPException(status_code=500, detail=f"Discovery failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Discovery failed: {str(e)}"
+        ) from e
 
 
 @app.post("/heartbeat/{agent_id}", response_model=HeartbeatResponse)
@@ -138,11 +137,13 @@ async def agent_heartbeat(agent_id: str):
                 agent_id=agent_id,
                 timestamp=agent.last_heartbeat.isoformat() if agent else "",
             )
-        else:
-            raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
     except Exception as e:
         logger.error(f"Heartbeat error for {agent_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Heartbeat failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Heartbeat failed: {str(e)}"
+        ) from e
 
 
 @app.get("/agents/{agent_id}")
@@ -162,13 +163,13 @@ async def get_agent_info(agent_id: str) -> Dict[str, Any]:
                 "last_heartbeat": agent.last_heartbeat.isoformat(),
                 "metadata": agent.metadata,
             }
-        else:
-            raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
     except Exception as e:
         logger.error(f"Error getting agent {agent_id}: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to get agent info: {str(e)}"
-        )
+        ) from e
 
 
 @app.delete("/agents/{agent_id}")
@@ -179,11 +180,13 @@ async def unregister_agent(agent_id: str) -> Dict[str, str]:
         if success:
             logger.info(f"Agent unregistered: {agent_id}")
             return {"status": "unregistered", "agent_id": agent_id}
-        else:
-            raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+
+        raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
     except Exception as e:
         logger.error(f"Unregistration error for {agent_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Unregistration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unregistration failed: {str(e)}"
+        ) from e
 
 
 @app.get("/stats")
@@ -201,7 +204,9 @@ async def get_registry_stats() -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"Stats error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get stats: {str(e)}"
+        ) from e
 
 
 @app.get("/health")

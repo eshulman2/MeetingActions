@@ -87,8 +87,8 @@ class RedisCache(metaclass=SingletonMeta):
         try:
             if ttl:
                 return bool(self.redis_client.setex(key, ttl, value))
-            else:
-                return bool(self.redis_client.set(key, value))
+
+            return bool(self.redis_client.set(key, value))
         except RedisError as e:
             logger.error(f"Redis set error for key {key}: {e}")
             return False

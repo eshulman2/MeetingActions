@@ -1,3 +1,5 @@
+"""Agent registry implementation using Redis for persistence."""
+
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -11,6 +13,8 @@ logger = get_logger("agent_registry")
 
 
 class AgentInfo(BaseModel):
+    """Model representing agent information in the registry."""
+
     agent_id: str
     name: str
     description: str
@@ -22,11 +26,13 @@ class AgentInfo(BaseModel):
     metadata: Dict[str, Any] = {}
 
     class Config:
+        """Pydantic configuration for AgentInfo model."""
+
         json_encoders = {datetime: lambda v: v.isoformat()}
 
 
 class AgentRegistry(metaclass=SingletonMeta):
-    """Singleton Agent Registry using enhanced Redis cache"""
+    """Singleton Agent Registry using enhanced Redis cache."""
 
     def __init__(self):
         """Initialize registry with Redis cache"""
