@@ -38,7 +38,7 @@ class TestAgentUtils:
         result = safe_load_mcp_tools([])
 
         # Should return empty list
-        assert result == []
+        assert not result
         mock_aget_tools.assert_not_called()
 
     @patch("src.core.agent_utils.aget_tools_from_mcp_url")
@@ -78,7 +78,7 @@ class TestAgentUtils:
             assert mock_logger.error.call_count == 2
 
             # Should return empty list
-            assert result == []
+            assert not result
 
     @patch("src.core.agent_utils.aget_tools_from_mcp_url")
     @patch("src.core.agent_utils.logger")

@@ -25,6 +25,7 @@ class ObservabilityConfigSchema(BaseModel):
 
     @model_validator(mode="after")
     def check_keys_if_enabled(self) -> "ObservabilityConfigSchema":
+        """Validate required keys when observability is enabled."""
         if self.enable and not self.secret_key:
             raise ValueError("secret_key is required when observability is enabled")
         if self.enable and not self.public_key:
@@ -49,6 +50,7 @@ class CacheConfigSchema(BaseModel):
 
     @model_validator(mode="after")
     def check_password_if_enabled(self) -> "CacheConfigSchema":
+        """Validate required password when cache is enabled."""
         if self.enable and not self.password:
             raise ValueError("Password is required when cache is enabled")
         return self
@@ -66,7 +68,7 @@ class ConfigSchema(BaseModel):
     port: int = Field(
         gt=0,
         le=65535,
-        default_factory=lambda: int(os.getenv("UVICORN_PORT", 8000)),
+        default_factory=lambda: int(os.getenv("UVICORN_PORT") or "8000"),
         description="uvicorn server port",
     )
     heartbeat_interval: int = Field(
@@ -132,9 +134,11 @@ class ConfigReader(metaclass=SingletonMeta):
     @classmethod
     def reset_instance(cls):
         """Reset singleton instance for testing."""
-        if cls in cls.__class__._instances:
-            del cls.__class__._instances[cls]
+        # pylint: disable=protected-access
+        if cls in cls._instances:
+            del cls._instances[cls]
 
 
 def get_config() -> ConfigReader:
+    """Get the global configuration instance."""
     return ConfigReader()

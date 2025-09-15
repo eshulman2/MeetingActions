@@ -1,3 +1,5 @@
+"""Base agent server implementation for the Agents framework."""
+
 import asyncio
 from datetime import datetime, timezone
 from typing import Optional
@@ -33,6 +35,8 @@ class ChatResponse(BaseModel):
 
 
 class BaseAgentServer(BaseServer):
+    """Base class for agent servers with registry integration."""
+
     def __init__(self, llm, title, description, auto_register: bool = True):
         super().__init__(llm, title, description)
         config = get_config()
@@ -150,7 +154,7 @@ class BaseAgentServer(BaseServer):
                 logger.error(f"Error discovering agents: {e}")
                 raise HTTPException(
                     status_code=500, detail=f"Error discovering agents: {e}"
-                )
+                ) from e
 
     async def _on_startup(self) -> None:
         """Called when the FastAPI app starts up."""
@@ -204,11 +208,11 @@ class BaseAgentServer(BaseServer):
                 if success:
                     logger.info(f"Successfully registered agent: {self.agent_id}")
                     return True
-                else:
-                    logger.warning(
-                        f"Failed to register agent: {self.agent_id} "
-                        f"(attempt {attempt + 1}/{max_retries})"
-                    )
+
+                logger.warning(
+                    f"Failed to register agent: {self.agent_id} "
+                    f"(attempt {attempt + 1}/{max_retries})"
+                )
 
             except Exception as e:
                 logger.warning(
@@ -235,11 +239,11 @@ class BaseAgentServer(BaseServer):
                 if success:
                     logger.info(f"Successfully unregistered agent: {self.agent_id}")
                     return True
-                else:
-                    logger.warning(
-                        f"Agent {self.agent_id} was not found in registry "
-                        f"(attempt {attempt + 1}/{max_retries})"
-                    )
+
+                logger.warning(
+                    f"Agent {self.agent_id} was not found in registry "
+                    f"(attempt {attempt + 1}/{max_retries})"
+                )
 
             except Exception as e:
                 logger.warning(

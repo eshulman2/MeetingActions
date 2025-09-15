@@ -144,11 +144,11 @@ class RegistryClient:
                 )
                 # Consider this success - agent is not registered
                 return True
-            else:
-                logger.error(
-                    f"HTTP error unregistering agent {agent_id}: "
-                    f"{e.response.status_code}"
-                )
+
+            logger.error(
+                f"HTTP error unregistering agent {agent_id}: "
+                f"{e.response.status_code}"
+            )
             return False
         except Exception as e:
             logger.error(f"Error unregistering agent {agent_id}: {e}")
@@ -201,7 +201,7 @@ class RegistryClient:
 
         except httpx.TimeoutException:
             logger.error(
-                "Timeout getting registry stats - " "registry service unreachable"
+                "Timeout getting registry stats - registry service unreachable"
             )
             return {"error": "Registry service unreachable"}
         except httpx.HTTPStatusError as e:
