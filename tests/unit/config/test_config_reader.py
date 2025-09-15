@@ -138,7 +138,8 @@ class TestConfigReader:
     def test_validation_error(self, tmp_path):
         """Test error when config file has invalid schema."""
         invalid_config = tmp_path / "invalid_schema.json"
-        invalid_config.write_text('{"invalid_field": "value"}')
+        # Use an invalid type for a field that's required to be an integer
+        invalid_config.write_text('{"port": "not_a_number"}')
 
         with patch.dict(os.environ, {"CONFIG_PATH": str(invalid_config)}):
             with patch.object(ConfigReader, "_instances", {}):
