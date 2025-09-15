@@ -1,4 +1,11 @@
-"""Base agent server implementation for the Agents framework."""
+"""Base agent server implementation providing common functionality for
+all agent servers.
+
+This module contains the BaseAgentServer class that extends BaseServer with
+agent-specific
+functionality including registry integration, heartbeat management, and standardized
+agent endpoints for chat interactions and discovery.
+"""
 
 import asyncio
 from datetime import datetime, timezone
@@ -35,7 +42,15 @@ class ChatResponse(BaseModel):
 
 
 class BaseAgentServer(BaseServer):
-    """Base class for agent servers with registry integration."""
+    """Base class for agent servers with registry integration and heartbeat management.
+
+    Extends BaseServer to provide agent-specific functionality including:
+    - Automatic registration with the agent registry
+    - Periodic heartbeat to maintain registry presence
+    - Standardized agent chat endpoints
+    - Agent discovery capabilities
+    - Graceful startup and shutdown handling
+    """
 
     def __init__(self, llm, title, description, auto_register: bool = True):
         super().__init__(llm, title, description)
@@ -208,7 +223,6 @@ class BaseAgentServer(BaseServer):
                 if success:
                     logger.info(f"Successfully registered agent: {self.agent_id}")
                     return True
-
                 logger.warning(
                     f"Failed to register agent: {self.agent_id} "
                     f"(attempt {attempt + 1}/{max_retries})"
@@ -239,7 +253,6 @@ class BaseAgentServer(BaseServer):
                 if success:
                     logger.info(f"Successfully unregistered agent: {self.agent_id}")
                     return True
-
                 logger.warning(
                     f"Agent {self.agent_id} was not found in registry "
                     f"(attempt {attempt + 1}/{max_retries})"

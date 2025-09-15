@@ -16,13 +16,13 @@ from llama_index.core.workflow import (
     Context,
     Event,
     StartEvent,
-    StopEvent,
     Workflow,
     step,
 )
 from llama_index.tools.mcp import BasicMCPClient
 from pydantic import BaseModel
 
+from src.core.workflows.common_events import StopWithErrorEvent
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.prompts.prompts import IDENTIFY_MEETING_NOTES
@@ -123,7 +123,7 @@ class MeetingNotesWorkflow(Workflow):
     @step
     async def get_meetings_for_date(
         self, event: StartEvent
-    ) -> MeetingAttachmentEvent | StopEvent:
+    ) -> MeetingAttachmentEvent | StopWithErrorEvent:
         """Retrieve calendar events for a specific date and meeting name.
 
         Searches for calendar events on the specified date that match the given
@@ -134,7 +134,7 @@ class MeetingNotesWorkflow(Workflow):
 
         Returns:
             MeetingAttachmentEvent with the event ID if found, or
-            StopEvent if no matching events found or an error occurred
+            StopWithErrorEvent if no matching events found or an error occurred
         """
         logger.info(f"Getting meeting events for {event.meeting} on {event.date}")
 
@@ -151,10 +151,10 @@ class MeetingNotesWorkflow(Workflow):
             )
         except ConnectionError as e:
             logger.error(f"Failed to connect to calendar service: {e}")
-            return StopEvent(result="connection_error")
+            return StopWithErrorEvent(result="connection_error", error=True)
         except Exception as e:
             logger.error(f"Error retrieving calendar events: {e}")
-            return StopEvent(result="calendar_error")
+            return StopWithErrorEvent(result="calendar_error", error=True)
 
         try:
             if (
@@ -162,12 +162,12 @@ class MeetingNotesWorkflow(Workflow):
                 or "result" not in calendar_events.structuredContent
             ):
                 logger.error("Invalid calendar events response format")
-                return StopEvent(result="invalid_response")
+                return StopWithErrorEvent(result="invalid_response", error=True)
 
             events_list = calendar_events.structuredContent["result"]
             if not isinstance(events_list, list):
                 logger.error("Calendar events result is not a list")
-                return StopEvent(result="invalid_response")
+                return StopWithErrorEvent(result="invalid_response", error=True)
 
             events_ids = [
                 item["id"]
@@ -180,21 +180,21 @@ class MeetingNotesWorkflow(Workflow):
 
             if not events_ids:
                 logger.warning(f"No matching events found for '{event.meeting}'")
-                return StopEvent(result="no_events_found")
+                return StopWithErrorEvent(result="no_events_found", error=True)
 
             logger.info(f"Found {len(events_ids)} matching events")
             return MeetingAttachmentEvent(event_id=events_ids[0])
         except (KeyError, TypeError) as e:
             logger.error(f"Error parsing calendar events response: {e}")
-            return StopEvent(result="parse_error")
+            return StopWithErrorEvent(result="parse_error", error=True)
         except Exception as e:
             logger.error(f"Unexpected error processing calendar events: {e}")
-            return StopEvent(result="processing_error")
+            return StopWithErrorEvent(result="processing_error", error=True)
 
     @step
     async def get_meeting_attachments_ids(
         self, ctx: Context, event: MeetingAttachmentEvent
-    ) -> StopEvent | AttachmentNameEvent | None:
+    ) -> StopWithErrorEvent | AttachmentNameEvent | None:
         """Retrieve Google Doc attachment IDs from a calendar event.
 
         Fetches all Google Document attachments associated with the given
@@ -205,7 +205,7 @@ class MeetingNotesWorkflow(Workflow):
             event: Event containing the calendar event ID
 
         Returns:
-            None if successful (events are sent to context), or StopEvent
+            None if successful (events are sent to context), or StopWithErrorEvent
             if no attachments found or an error occurred
         """
         try:
@@ -214,10 +214,10 @@ class MeetingNotesWorkflow(Workflow):
             )
         except ConnectionError as e:
             logger.error(f"Failed to connect to attachments service: {e}")
-            return StopEvent(result="connection_error")
+            return StopWithErrorEvent(result="connection_error", error=True)
         except Exception as e:
             logger.error(f"Error calling attachments service: {e}")
-            return StopEvent(result="service_error")
+            return StopWithErrorEvent(result="service_error", error=True)
 
         try:
             if (
@@ -225,7 +225,7 @@ class MeetingNotesWorkflow(Workflow):
                 or "result" not in res.structuredContent
             ):
                 logger.error("Invalid attachments response format")
-                return StopEvent(result="invalid_response")
+                return StopWithErrorEvent(result="invalid_response", error=True)
 
             attachments_ids = res.structuredContent["result"]
 
@@ -233,11 +233,11 @@ class MeetingNotesWorkflow(Workflow):
                 logger.warning(
                     f"Unexpected attachments format: {type(attachments_ids)}"
                 )
-                return StopEvent(result="invalid_format")
+                return StopWithErrorEvent(result="invalid_format", error=True)
 
             if not attachments_ids:
                 logger.info("No attachments found for this meeting")
-                return StopEvent(result="no_attachments")
+                return StopWithErrorEvent(result="no_attachments", error=False)
 
             logger.info(f"Found {len(attachments_ids)} meeting attachments")
             await ctx.store.set("attachments_ids_len", len(attachments_ids))
@@ -249,7 +249,7 @@ class MeetingNotesWorkflow(Workflow):
 
         except Exception as e:
             logger.error(f"Error processing attachments response: {e}")
-            return StopEvent(result="processing_error")
+            return StopWithErrorEvent(result="processing_error", error=True)
 
     @step
     async def get_attachments_title(
@@ -416,7 +416,7 @@ class MeetingNotesWorkflow(Workflow):
             return GetDocContent(attachment_id=attachment_id)
 
     @step
-    async def get_doc_content(self, event: GetDocContent) -> StopEvent:
+    async def get_doc_content(self, event: GetDocContent) -> StopWithErrorEvent:
         """Retrieve the content of the identified meeting notes document.
 
         Fetches the full text content of the Google Document identified
@@ -426,7 +426,7 @@ class MeetingNotesWorkflow(Workflow):
             event: Event containing the document ID to retrieve
 
         Returns:
-            StopEvent containing the document content
+            StopWithErrorEvent containing the document content
         """
         try:
             doc = await self.mcp_client.call_tool(
@@ -434,10 +434,10 @@ class MeetingNotesWorkflow(Workflow):
             )
         except ConnectionError as e:
             logger.error(f"Failed to connect to document service: {e}")
-            return StopEvent(result="connection_error", error=True)
+            return StopWithErrorEvent(result="connection_error", error=True)
         except Exception as e:
             logger.error(f"Error calling document service: {e}")
-            return StopEvent(result="service_error", error=True)
+            return StopWithErrorEvent(result="service_error", error=True)
 
         try:
             if (
@@ -445,7 +445,7 @@ class MeetingNotesWorkflow(Workflow):
                 or "result" not in doc.structuredContent
             ):
                 logger.error("Invalid document content response format")
-                return StopEvent(result="invalid_response", error=True)
+                return StopWithErrorEvent(result="invalid_response", error=True)
 
             content = doc.structuredContent["result"]
 
@@ -463,13 +463,13 @@ class MeetingNotesWorkflow(Workflow):
 
             if not content.strip():
                 logger.warning(f"Document {event.attachment_id} content is empty")
-                return StopEvent(result="empty_document", error=False)
+                return StopWithErrorEvent(result="empty_document", error=False)
 
             logger.info(
                 f"Successfully retrieved document content ({len(content)} chars)"
             )
-            return StopEvent(result=content)
+            return StopWithErrorEvent(result=content, error=False)
 
         except Exception as e:
             logger.error(f"Error processing document content: {e}")
-            return StopEvent(result="processing_error", error=True)
+            return StopWithErrorEvent(result="processing_error", error=True)

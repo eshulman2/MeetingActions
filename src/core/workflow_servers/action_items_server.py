@@ -9,7 +9,7 @@ from langfuse import get_client as get_langfuse_client
 from pydantic import BaseModel, PastDate
 
 from src.core.base.base_server import BaseServer
-from src.core.workflows.action_items_workflow import ActionItemsWorkflow
+from src.core.workflows.action_items_orchestrator import ActionItemsOrchestrator
 from src.infrastructure.config import get_config, get_model
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.observability.observability import set_up_langfuse
@@ -47,9 +47,9 @@ class ActionItemsServer(BaseServer):
     def create_service(self, llm):
         logger.info("Creating action items workflow")
 
-        workflow = ActionItemsWorkflow(
+        workflow = ActionItemsOrchestrator(
             llm=llm,
-            timeout=30,
+            timeout=300,
             verbose=True,
             max_iterations=20,
         )
@@ -63,7 +63,7 @@ class ActionItemsServer(BaseServer):
         async def create_action_items_endpoint(request: Meeting):
             """FastAPI endpoint for processing meeting notes into action items.
 
-            This endpoint initializes and runs the ActionItemsWorkflow to process
+            This endpoint initializes and runs the ActionItemsOrchestrator to process
             meeting information and generate structured action items with full
             observability tracking via Langfuse.
 
@@ -102,8 +102,11 @@ class ActionItemsServer(BaseServer):
                     )
                 langfuse_client.flush()
 
+                if getattr(res, "error", False):
+                    raise HTTPException(status_code=500, detail=f"{res.result}")
+
                 logger.info("Action items workflow completed successfully")
-                return ActionItemsResponse(action_items=res)
+                return ActionItemsResponse(action_items=res.result)
             except Exception as e:
                 logger.error(f"Error processing action items request: {e}")
                 raise HTTPException(

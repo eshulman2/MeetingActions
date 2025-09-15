@@ -59,14 +59,14 @@ MeetingActions follows a microservices architecture with specialized agents and 
   - Document analysis and generation
   - Email automation capabilities
 
-### 3. **MeetingActions Workflow Server** (`src/core/workflow_servers/action_items_server.py`)
-- **Purpose**: Core MeetingActions orchestration engine
+### 3. **Action Items Workflow Server** (`src/core/workflow_servers/action_items_server.py`)
+- **Purpose**: Orchestrates complex multi-step workflows using composable sub-workflows
 - **Port**: 8002
 - **Features**:
-  - Intelligent meeting notes to action items conversion
+  - Meeting notes to action items conversion with modular sub-workflows
   - Multi-agent task orchestration and routing
-  - Advanced workflow state management
-  - Seamless integration with external agent systems
+  - Workflow state management with shared data models
+  - Agent discovery and dynamic dispatch via service registry
 
 ### 4. **Agent Registry Service** (`src/services/registry_service.py`)
 - **Purpose**: Service discovery and health monitoring
@@ -178,7 +178,13 @@ src/
 │   │   ├── base_server.py # Base server implementation
 │   │   └── base_agent_server.py # Base agent server class
 │   ├── workflows/         # Event-driven workflow definitions
-│   │   └── action_items_workflow.py # Meeting notes workflow
+│   │   ├── action_items_orchestrator.py # Main action items orchestrator
+│   │   ├── models.py      # Shared workflow data models
+│   │   ├── common_events.py # Common workflow events
+│   │   └── sub_workflows/ # Focused sub-workflow components
+│   │       ├── meeting_notes_workflow.py # Meeting notes retrieval
+│   │       ├── action_items_generation_workflow.py # Action items generation
+│   │       └── agent_dispatch_workflow.py # Agent routing and execution
 │   ├── workflow_servers/  # Workflow execution servers
 │   │   └── action_items_server.py # Action items server
 │   └── agent_utils.py     # Agent utility functions
@@ -266,38 +272,69 @@ curl -X POST "http://localhost:8000/agent" \
 
 ## 🔄 Event-Driven Workflows
 
-### MeetingActions Core Workflow
+### Action Items Orchestrator
 
-**Comprehensive Meeting Intelligence Pipeline:**
-1. **Content Ingestion**: Retrieve meeting notes from multiple sources
-2. **AI Processing**: Extract structured action items using advanced LLM analysis
-3. **Quality Assurance**: Multi-stage validation and intelligent review cycles
-4. **Smart Validation**: Ensure proper data structure and format compliance
-5. **Agent Routing**: Intelligent dispatch to appropriate specialized agents
-6. **Execution Tracking**: Real-time progress monitoring and results aggregation
+**Composable Sub-Workflows Architecture:**
+
+The action items processing has been refactored into a modular, composable architecture with three focused sub-workflows:
+
+#### 1. **Meeting Notes Workflow** (`meeting_notes_workflow.py`)
+- **Purpose**: Retrieve and validate meeting notes from external sources
+- **Features**: Content validation, error handling, format normalization
+
+#### 2. **Action Items Generation Workflow** (`action_items_generation_workflow.py`)
+- **Purpose**: Extract and refine structured action items using LLM analysis
+- **Features**:
+  - Multi-stage validation and review cycles
+  - Iterative refinement with feedback loops
+  - Structured output with Pydantic models
+
+#### 3. **Agent Dispatch Workflow** (`agent_dispatch_workflow.py`)
+- **Purpose**: Route action items to appropriate agents and collect execution results
+- **Features**:
+  - Intelligent agent discovery via registry
+  - Dynamic routing decisions
+  - Execution tracking and result aggregation
+
+**Orchestrator Pipeline:**
+1. **Meeting Notes Retrieval**: Get notes from configured endpoints
+2. **Action Items Generation**: Extract structured action items with validation
+3. **Quality Review**: Multi-stage validation and refinement cycles
+4. **Agent Discovery**: Find available agents via service registry
+5. **Intelligent Routing**: Match action items to appropriate agents
+6. **Execution Monitoring**: Track progress and aggregate results
 
 **Advanced Features:**
-- **Retry Mechanisms**: Configurable retry logic with exponential backoff
-- **Error Recovery**: Automatic correction and reprocessing
+- **Composable Architecture**: Each sub-workflow can be used independently
+- **Shared Data Models**: Type-safe Pydantic models for all workflow data
+- **Common Events**: Standardized event system across workflows
+- **Error Propagation**: Structured error handling with `StopWithErrorEvent`
 - **Observability**: Full tracing with Langfuse integration
-- **State Management**: Persistent workflow context and memory
+- **Backward Compatibility**: Maintains existing API interface
 
 **MeetingActions Usage Example:**
 ```python
-from src.core.workflows.action_items_workflow import ActionItemsWorkflow
+from src.core.workflows.action_items_orchestrator import ActionItemsOrchestrator
 
-# Initialize MeetingActions workflow with custom parameters
-workflow = ActionItemsWorkflow(
-    timeout=60,
+# Initialize orchestrator with sub-workflows
+orchestrator = ActionItemsOrchestrator(
+    llm=llm,
+    timeout=300,
     verbose=True,
-    max_iterations=5
+    max_iterations=20
 )
 
-# Execute MeetingActions workflow
-result = await workflow.run(
+# Execute complete pipeline
+result = await orchestrator.run(
     meeting="Weekly Team Sync",
     date="2024-09-08"
 )
+
+# Or use individual sub-workflows
+from src.core.workflows.sub_workflows.action_items_generation_workflow import ActionItemsGenerationWorkflow
+
+generation_workflow = ActionItemsGenerationWorkflow(llm=llm, max_iterations=5)
+action_items = await generation_workflow.run(meeting_notes=notes)
 ```
 
 ## ⚙️ Configuration
