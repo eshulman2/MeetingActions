@@ -39,10 +39,10 @@ help:
 # Start MCP server
 start-mcp:
 	@echo "Starting MCP server..."
-	python -m src.mcp.google_tools_mcp
+	UVICORN_PORT=8100 python -m src.mcp.google_tools_mcp
 
 # Start agent servers
-start-google-agents:
+start-google-agent:
 	@echo "Starting Google agent..."
 	UVICORN_PORT=8001 python -m src.core.agents.google_agent
 
@@ -51,14 +51,14 @@ start-jira-agent:
 	UVICORN_PORT=8000 python -m src.core.agents.jira_agent
 
 # Start workflow server
-start-workflows:
+start-workflow:
 	@echo "Starting workflow server..."
 	UVICORN_PORT=8002 python -m src.core.workflow_servers.action_items_server
 
 # Start registry service
 start-registry:
 	@echo "Starting agent registry service..."
-	python -m src.services.registry_service
+	UVICORN_PORT=8003 python -m src.services.registry_service
 
 # Start all servers
 start-all:
