@@ -241,9 +241,19 @@ class AgentDispatchWorkflow(Workflow):
             # Execute via agent API
             agent_url = f"{event.agent_url}/agent"
 
+            # Format the query with individual fields from the action item
+            query = AGENT_QUERY_PROMPT.format(
+                title=action_item.get("title", "N/A"),
+                description=action_item.get("description", "N/A"),
+                assignee=action_item.get("assignee", "TBD"),
+                due_date=str(action_item.get("due_date", "TBD")),
+                priority=action_item.get("priority", "medium"),
+                category=action_item.get("category", "general"),
+            )
+
             response = requests.post(
                 agent_url,
-                json={"query": AGENT_QUERY_PROMPT.format(action_item=action_item)},
+                json={"query": query},
                 timeout=120,
             )
             response.raise_for_status()

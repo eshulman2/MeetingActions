@@ -199,9 +199,25 @@ Your task is to function as a routing engine. Analyze the action item and the li
 
 AGENT_QUERY_PROMPT = PromptTemplate(
     """
-Using the context and fields in the following json please preform the required actions:
-**--- JSON START ---**
-{action_item}
-**--- JSON END ---**
+You are tasked with executing the following action item. Please complete the task described below.
+
+**ACTION ITEM DETAILS:**
+- **Title:** {title}
+- **Description:** {description}
+- **Assignee:** {assignee}
+- **Due Date:** {due_date}
+- **Priority:** {priority}
+- **Category:** {category}
+
+**YOUR TASK:**
+{description}
+
+**INSTRUCTIONS:**
+1. Perform the specific actions described in the description above
+2. If you need to use tools, use them appropriately based on the task requirements
+3. Provide a clear summary of what you accomplished
+4. If you cannot complete the task, explain why and what information is missing
+
+Please proceed with executing this task now.
 """
 )
