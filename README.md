@@ -345,7 +345,7 @@ action_items = await generation_workflow.run(meeting_notes=notes)
 {
   "llm": "OpenAILike",
   "model": "gemini-2.0-flash",
-  "verify_ssl": false,
+  "verify_ssl": true,
   "additional_model_parameter": {
     "api_base": "https://your-gemini-endpoint.com/v1beta/openai",
     "is_chat_model": true
@@ -586,6 +586,31 @@ GET  /cache/stats        # Cache performance metrics
 GET  /metrics           # Prometheus-compatible metrics
 ```
 
+## 🧪 Testing
+
+The project includes comprehensive testing with 109+ tests covering unit, integration, and performance scenarios.
+
+### Quick Test Run
+```bash
+# Run all tests with coverage
+pytest
+
+# Run specific test types
+pytest tests/unit              # Unit tests only
+pytest tests/integration       # Integration tests only
+pytest tests/performance       # Performance tests only
+
+# Run with markers
+pytest -m "not slow"           # Skip slow tests
+```
+
+### Test Configuration
+- **Configuration**: `pytest.ini` (main config) and `tests/.coveragerc` (coverage config)
+- **Coverage Target**: 80% minimum coverage required
+- **Output Formats**: Terminal, HTML (`htmlcov/`), and XML (`coverage.xml`) reports
+
+For detailed testing documentation, see [TESTING.md](TESTING.md).
+
 ## 🔍 Troubleshooting
 
 ### Common Issues
@@ -632,7 +657,7 @@ curl -f http://localhost:8001/health || echo "Google agent down"
 
 1. **Code Quality**: Follow PEP 8 and use type hints
 2. **Documentation**: Comprehensive docstrings for all classes and methods
-3. **Testing**: Unit tests for new functionality
+3. **Testing**: Unit tests for new functionality (see TESTING.md for details)
 4. **Architecture**: Maintain clean architecture principles
 
 ---

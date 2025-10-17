@@ -20,7 +20,7 @@ class MockAgent:
         return f"Mock response to: {query}"
 
 
-class TestBaseServer(BaseServer):
+class MockBaseServer(BaseServer):
     """Test implementation of BaseServer."""
 
     def create_service(self, llm):
@@ -32,7 +32,7 @@ class TestBaseServer(BaseServer):
             return {"message": "test"}
 
 
-class TestBaseAgentServer(BaseAgentServer):
+class MockBaseAgentServer(BaseAgentServer):
     """Test implementation of BaseAgentServer."""
 
     def create_service(self, llm):
@@ -48,7 +48,7 @@ class TestBaseServerClass:
 
     def test_server_initialization(self, mock_llm):
         """Test server initialization."""
-        server = TestBaseServer(
+        server = MockBaseServer(
             llm=mock_llm, title="Test Server", description="Test Description"
         )
 
@@ -59,7 +59,7 @@ class TestBaseServerClass:
 
     def test_common_routes_exist(self, mock_llm, test_client_factory):
         """Test that common routes are created."""
-        server = TestBaseServer(
+        server = MockBaseServer(
             llm=mock_llm, title="Test Server", description="Test Description"
         )
         client = test_client_factory(server.app)
@@ -85,7 +85,7 @@ class TestBaseServerClass:
 
     def test_additional_routes(self, mock_llm, test_client_factory):
         """Test that additional routes are added."""
-        server = TestBaseServer(
+        server = MockBaseServer(
             llm=mock_llm, title="Test Server", description="Test Description"
         )
         client = test_client_factory(server.app)
@@ -101,7 +101,7 @@ class TestBaseAgentServerClass:
 
     def test_agent_server_initialization(self, mock_llm):
         """Test agent server initialization."""
-        server = TestBaseAgentServer(
+        server = MockBaseAgentServer(
             llm=mock_llm, title="Test Agent", description="Test Agent Description"
         )
 
@@ -129,7 +129,7 @@ class TestBaseAgentServerClass:
         mock_context_instance = MagicMock()
         mock_context.return_value = mock_context_instance
 
-        server = TestBaseAgentServer(
+        server = MockBaseAgentServer(
             llm=mock_llm, title="Test Agent", description="Test Agent Description"
         )
 
@@ -166,7 +166,7 @@ class TestBaseServerRoutes:
 
     def test_health_check_content(self, mock_llm, test_client_factory):
         """Test health check endpoint content."""
-        server = TestBaseServer(
+        server = MockBaseServer(
             llm=mock_llm, title="Health Test Server", description="Health Test"
         )
         client = test_client_factory(server.app)
@@ -182,7 +182,7 @@ class TestBaseServerRoutes:
 
     def test_description_endpoint(self, mock_llm, test_client_factory):
         """Test description endpoint."""
-        server = TestBaseServer(
+        server = MockBaseServer(
             llm=mock_llm, title="Description Test", description="Custom Description"
         )
         client = test_client_factory(server.app)
@@ -193,7 +193,7 @@ class TestBaseServerRoutes:
 
     def test_root_endpoint_message(self, mock_llm, test_client_factory):
         """Test root endpoint message format."""
-        server = TestBaseServer(
+        server = MockBaseServer(
             llm=mock_llm, title="Root Test Server", description="Root Test"
         )
         client = test_client_factory(server.app)
