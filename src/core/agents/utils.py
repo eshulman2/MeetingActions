@@ -18,8 +18,6 @@ def safe_load_mcp_tools(mcp_servers):
             tools.extend(asyncio.run(aget_tools_from_mcp_url(server)))
         # pylint: disable=broad-exception-caught
         except Exception as e:
-            logger.error(
-                f"Warning: Failed to load MCP tools from {server}: {e}"
-            )
+            logger.error(f"Warning: Failed to load MCP tools from {server}: {e}")
 
     return tools

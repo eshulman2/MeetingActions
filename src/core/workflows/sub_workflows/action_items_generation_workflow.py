@@ -14,8 +14,8 @@ from llama_index.core.workflow import (
     step,
 )
 
+from src.core.schemas.workflow_models import ActionItemsList, ReviewFeedback
 from src.core.workflows.common_events import StopWithErrorEvent
-from src.core.workflows.models import ActionItemsList, ReviewFeedback
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.prompts.prompts import (
     ACTION_ITEMS_PROMPT,
@@ -148,7 +148,7 @@ class ActionItemsGenerationWorkflow(Workflow):
 
             if not review.requires_changes:
                 logger.info("Review passed: Action items approved")
-                print(event.action_items)
+                logger.debug(event.action_items)
                 return StopWithErrorEvent(result=event.action_items, error=False)
 
             logger.info(f"Review identified issues: {review.feedback}")

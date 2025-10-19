@@ -6,8 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.core.base.base_agent_server import BaseAgentServer, ChatQuery, ChatResponse
+from src.core.base.base_agent_server import BaseAgentServer, ChatQuery
 from src.core.base.base_server import BaseServer
+from src.core.schemas.agent_response import AgentResponse
 
 
 class MockAgent:
@@ -23,9 +24,6 @@ class MockAgent:
 class TestBaseServer(BaseServer):
     """Test implementation of BaseServer."""
 
-    def create_service(self, llm):
-        return MockAgent()
-
     def additional_routes(self):
         @self.app.get("/test-endpoint")
         async def test_endpoint():
@@ -35,7 +33,7 @@ class TestBaseServer(BaseServer):
 class TestBaseAgentServer(BaseAgentServer):
     """Test implementation of BaseAgentServer."""
 
-    def create_service(self, llm):
+    def create_service(self):
         return MockAgent()
 
     def additional_routes(self):
@@ -55,7 +53,6 @@ class TestBaseServerClass:
         assert server.app.title == "Test Server"
         assert server.app.description == "Test Description"
         assert server.app.version == "1.0.0"
-        assert isinstance(server.service, MockAgent)
 
     def test_common_routes_exist(self, mock_llm, test_client_factory):
         """Test that common routes are created."""
@@ -135,14 +132,21 @@ class TestBaseAgentServerClass:
 
         client = test_client_factory(server.app)
 
-        # Mock the async agent run method
-        server.service.run = AsyncMock(return_value="Test response")
+        # Mock the async agent run method with structured response
+        mock_agent_response = MagicMock()
+        mock_agent_response.structured_response = {
+            "response": "Test response",
+            "error": False,
+            "additional_info_required": False,
+        }
+        server.service.run = AsyncMock(return_value=mock_agent_response)
 
         response = client.post("/agent", json={"query": "test query"})
         assert response.status_code == 200
 
         data = response.json()
         assert "response" in data
+        assert data["response"] == "Test response"
 
     def test_chat_query_validation(self):
         """Test ChatQuery model validation."""
@@ -154,10 +158,11 @@ class TestBaseAgentServerClass:
         query = ChatQuery(query="")
         assert query.query == ""
 
-    def test_chat_response_creation(self):
-        """Test ChatResponse model creation."""
-        response = ChatResponse(response="Test response")
+    def test_agent_response_creation(self):
+        """Test AgentResponse model creation."""
+        response = AgentResponse(response="Test response", error=False)
         assert response.response == "Test response"
+        assert response.error is False
 
 
 @pytest.mark.unit

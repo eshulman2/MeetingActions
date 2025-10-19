@@ -8,8 +8,14 @@ from fastapi import HTTPException
 from langfuse import get_client as get_langfuse_client
 from pydantic import BaseModel, PastDate
 
-from src.core.base.base_server import BaseServer
-from src.core.workflows.action_items_orchestrator import ActionItemsOrchestrator
+from src.core.base.base_workflow_server import BaseWorkflowServer
+from src.core.schemas.workflow_models import ActionItemsList
+from src.core.workflows.action_items_dispatch_orchestrator import (
+    ActionItemsDispatchOrchestrator,
+)
+from src.core.workflows.meeting_notes_and_generation_orchestrator import (
+    MeetingNotesAndGenerationOrchestrator,
+)
 from src.infrastructure.config import get_config, get_model
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.observability.observability import set_up_langfuse
@@ -41,31 +47,43 @@ class ActionItemsResponse(BaseModel):
     action_items: Any
 
 
-class ActionItemsServer(BaseServer):
-    """Action item agent server implementation."""
+class DispatchRequest(BaseModel):
+    """Request model for dispatching action items to agents.
 
-    def create_service(self, llm):
-        logger.info("Creating action items workflow")
+    Attributes:
+        action_items: ActionItemsList to dispatch
+    """
 
-        workflow = ActionItemsOrchestrator(
-            llm=llm,
-            timeout=300,
-            verbose=True,
-            max_iterations=20,
-        )
-        logger.info("Action items workflow created successfully")
+    action_items: ActionItemsList
 
-        return workflow
+
+class DispatchResponse(BaseModel):
+    """Response model for dispatch results.
+
+    Attributes:
+        results: List of agent execution results
+    """
+
+    results: Any
+
+
+class ActionItemsServer(BaseWorkflowServer):
+    """Action items workflow server implementation.
+
+    This server provides endpoints for generating action items from meetings
+    and dispatching them to agents. It uses workflow orchestrators created
+    per-request rather than a single persistent service.
+    """
 
     def additional_routes(self):
 
-        @self.app.post("/action-items", response_model=ActionItemsResponse)
-        async def create_action_items_endpoint(request: Meeting):
-            """FastAPI endpoint for processing meeting notes into action items.
+        @self.app.post("/generate", response_model=ActionItemsResponse)
+        async def generate_action_items_endpoint(request: Meeting):
+            """FastAPI endpoint for generating action items only (no agent dispatch).
 
-            This endpoint initializes and runs the ActionItemsOrchestrator to process
-            meeting information and generate structured action items with full
-            observability tracking via Langfuse.
+            This endpoint retrieves meeting notes and generates action items without
+            dispatching them to agents. Useful for reviewing action items before
+            execution.
 
             Args:
                 request: Meeting request containing meeting name and date
@@ -77,18 +95,23 @@ class ActionItemsServer(BaseServer):
                 HTTPException: If workflow execution fails
             """
             logger.info(
-                f"Processing action items request with {len(request.meeting)} "
-                "characters of meeting notes"
+                f"Generating action items for meeting: {request.meeting}, "
+                f"date: {request.date}"
             )
             try:
-
-                session_id = f"action-items-workflow-{str(uuid4())}"
-
+                session_id = f"generate-action-items-{str(uuid4())}"
                 langfuse_client = get_langfuse_client()
 
                 with langfuse_client.start_as_current_span(name=session_id) as span:
+                    # Initialize generation workflow
+                    generation_workflow = MeetingNotesAndGenerationOrchestrator(
+                        llm=self.llm,
+                        timeout=300,
+                        verbose=True,
+                        max_iterations=20,
+                    )
 
-                    res = await self.service.run(
+                    res = await generation_workflow.run(
                         meeting=request.meeting, date=request.date
                     )
 
@@ -96,7 +119,7 @@ class ActionItemsServer(BaseServer):
                         session_id=session_id,
                         input=(
                             f"meeting: {request.meeting}, "
-                            f"date: {request.date.strftime("%Y-%m-%d")}"
+                            f"date: {request.date.strftime('%Y-%m-%d')}"
                         ),
                         output=str(res),
                     )
@@ -105,12 +128,64 @@ class ActionItemsServer(BaseServer):
                 if getattr(res, "error", False):
                     raise HTTPException(status_code=500, detail=f"{res.result}")
 
-                logger.info("Action items workflow completed successfully")
+                logger.info("Action items generation completed successfully")
                 return ActionItemsResponse(action_items=res.result)
             except Exception as e:
-                logger.error(f"Error processing action items request: {e}")
+                logger.error(f"Error generating action items: {e}")
                 raise HTTPException(
-                    status_code=500, detail=f"Error processing request: {e}"
+                    status_code=500, detail=f"Error generating action items: {e}"
+                ) from e
+
+        @self.app.post("/dispatch", response_model=DispatchResponse)
+        async def dispatch_action_items_endpoint(request: DispatchRequest):
+            """FastAPI endpoint for dispatching action items to agents.
+
+            This endpoint takes pre-generated action items and dispatches them to
+            appropriate agents for execution.
+
+            Args:
+                request: DispatchRequest containing action items to dispatch
+
+            Returns:
+                DispatchResponse with execution results
+
+            Raises:
+                HTTPException: If workflow execution fails
+            """
+            logger.info(
+                f"Dispatching {len(request.action_items.action_items)} "
+                "action items to agents"
+            )
+            try:
+                session_id = f"dispatch-action-items-{str(uuid4())}"
+                langfuse_client = get_langfuse_client()
+
+                with langfuse_client.start_as_current_span(name=session_id) as span:
+                    # Initialize dispatch workflow
+                    dispatch_workflow = ActionItemsDispatchOrchestrator(
+                        llm=self.llm,
+                        timeout=300,
+                        verbose=True,
+                    )
+
+                    res = await dispatch_workflow.run(action_items=request.action_items)
+
+                    span.update_trace(
+                        session_id=session_id,
+                        input=str(request.action_items),
+                        output=str(res),
+                    )
+                langfuse_client.flush()
+
+                if getattr(res, "error", False):
+                    raise HTTPException(status_code=500, detail=f"{res.result}")
+
+                logger.info("Action items dispatch completed successfully")
+                return DispatchResponse(results=res.result)
+            except Exception as e:
+                logger.error(f"Error dispatching action items: {e}")
+                raise HTTPException(
+                    status_code=500, detail=f"Error dispatching action items: {e}"
                 ) from e
 
 

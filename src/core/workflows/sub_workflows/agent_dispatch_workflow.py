@@ -14,12 +14,13 @@ from llama_index.core.workflow import (
 )
 from pydantic import HttpUrl
 
-from src.core.workflows.common_events import StopWithErrorEvent
-from src.core.workflows.models import (
+from src.core.schemas.workflow_models import (
+    ActionItem,
     ActionItemsList,
     AgentExecutionResult,
     AgentRoutingDecision,
 )
+from src.core.workflows.common_events import StopWithErrorEvent
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.prompts.prompts import (
     AGENT_QUERY_PROMPT,
@@ -40,7 +41,7 @@ class ExecutionRequired(Event):
     """Event indicating agent execution is needed."""
 
     decision: AgentRoutingDecision
-    action_item_data: dict
+    action_item_data: ActionItem
     agent_url: HttpUrl | None
 
 
@@ -163,7 +164,7 @@ class AgentDispatchWorkflow(Workflow):
                     ctx.send_event(
                         ExecutionRequired(
                             decision=decision,
-                            action_item_data=action_item.model_dump(),
+                            action_item_data=action_item,
                             agent_url=agent_url,
                         )
                     )
@@ -182,7 +183,7 @@ class AgentDispatchWorkflow(Workflow):
                     ctx.send_event(
                         ExecutionRequired(
                             decision=unassigned_decision,
-                            action_item_data=action_item.model_dump(),
+                            action_item_data=action_item,
                             agent_url=None,
                         )
                     )
@@ -215,10 +216,14 @@ class AgentDispatchWorkflow(Workflow):
             return ExecutionCompleted(
                 result=AgentExecutionResult(
                     action_item_index=decision.action_item_index,
+                    action_item=action_item,
                     agent_name=decision.agent_name,
-                    success=False,
-                    result="No suitable agent found for this action item",
-                    error_message="Agent routing failed",
+                    request_error=True,
+                    agent_error=True,
+                    response=(
+                        "No suitable agent found for this action item. "
+                        "Agent routing failed."
+                    ),
                 )
             )
 
@@ -229,11 +234,13 @@ class AgentDispatchWorkflow(Workflow):
                 return ExecutionCompleted(
                     result=AgentExecutionResult(
                         action_item_index=decision.action_item_index,
+                        action_item=action_item,
                         agent_name=decision.agent_name,
-                        success=False,
-                        result="Agent URL not provided",
-                        error_message=(
-                            "No URL provided for agent " f"{decision.agent_name}"
+                        request_error=True,
+                        agent_error=True,
+                        response=(
+                            f"Agent URL not provided. No URL for agent "
+                            f"{decision.agent_name}"
                         ),
                     )
                 )
@@ -243,12 +250,12 @@ class AgentDispatchWorkflow(Workflow):
 
             # Format the query with individual fields from the action item
             query = AGENT_QUERY_PROMPT.format(
-                title=action_item.get("title", "N/A"),
-                description=action_item.get("description", "N/A"),
-                assignee=action_item.get("assignee", "TBD"),
-                due_date=str(action_item.get("due_date", "TBD")),
-                priority=action_item.get("priority", "medium"),
-                category=action_item.get("category", "general"),
+                title=getattr(action_item, "title", "N/A"),
+                description=getattr(action_item, "description", "N/A"),
+                assignee=getattr(action_item, "assignee", "TBD"),
+                due_date=str(getattr(action_item, "due_date", "TBD")),
+                priority=getattr(action_item, "priority", "medium"),
+                category=getattr(action_item, "category", "general"),
             )
 
             response = requests.post(
@@ -260,14 +267,24 @@ class AgentDispatchWorkflow(Workflow):
 
             response_data = response.json()
             logger.info(f"Agent {decision.agent_name} completed execution")
+            logger.debug(f"response date: {response_data}")
+
+            # Extract fields from agent response
+            agent_response_content = response_data.get("response", str(response_data))
+            agent_error = response_data.get("error", False)
+            additional_info_required = response_data.get(
+                "additional_info_required", False
+            )
 
             return ExecutionCompleted(
                 result=AgentExecutionResult(
                     action_item_index=decision.action_item_index,
+                    action_item=action_item,
                     agent_name=decision.agent_name,
-                    success=True,
-                    result=str(response_data),
-                    error_message=None,
+                    request_error=False,
+                    agent_error=agent_error,
+                    response=agent_response_content,
+                    additional_info_required=additional_info_required,
                 )
             )
 
@@ -276,10 +293,11 @@ class AgentDispatchWorkflow(Workflow):
             return ExecutionCompleted(
                 result=AgentExecutionResult(
                     action_item_index=decision.action_item_index,
+                    action_item=action_item,
                     agent_name=decision.agent_name,
-                    success=False,
-                    result="Agent execution failed",
-                    error_message=str(e),
+                    request_error=True,
+                    agent_error=True,
+                    response=f"Agent execution failed: {str(e)}",
                 )
             )
         except Exception as e:
@@ -287,10 +305,11 @@ class AgentDispatchWorkflow(Workflow):
             return ExecutionCompleted(
                 result=AgentExecutionResult(
                     action_item_index=decision.action_item_index,
+                    action_item=action_item,
                     agent_name=decision.agent_name,
-                    success=False,
-                    result="Unexpected execution error",
-                    error_message=str(e),
+                    request_error=True,
+                    agent_error=True,
+                    response=f"Unexpected execution error: {str(e)}",
                 )
             )
 
@@ -310,7 +329,11 @@ class AgentDispatchWorkflow(Workflow):
 
         # Extract results and compile summary
         execution_results = [result.result for result in results]
-        successful_executions = sum(1 for result in execution_results if result.success)
+        successful_executions = sum(
+            1
+            for result in execution_results
+            if not result.request_error and not result.agent_error
+        )
 
         logger.info(
             f"Execution summary: {successful_executions}/"
