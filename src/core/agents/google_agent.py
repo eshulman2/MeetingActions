@@ -6,10 +6,10 @@ action items from meeting summaries.
 import nest_asyncio
 import uvicorn
 from llama_index.core.agent.workflow import ReActAgent
-from pydantic import BaseModel, Field
 
-from src.core.agent_utils import safe_load_mcp_tools
+from src.core.agents.utils import safe_load_mcp_tools
 from src.core.base.base_agent_server import BaseAgentServer
+from src.core.schemas.agent_response import AgentResponse
 from src.infrastructure.config import get_config, get_model
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.observability.observability import set_up_langfuse
@@ -25,23 +25,11 @@ config = get_config()
 nest_asyncio.apply()
 
 
-class AgentResponseFormat(BaseModel):
-    """test format for meeting note endpoint reply"""
-
-    response: str = Field(description="Response if an error occurred describe it")
-    error: bool = Field(
-        description="field indicating on rather or not an error occurred"
-    )
-    additional_info: str | None = Field(
-        description="ask for additional info if needed", default=None
-    )
-
-
 class GoogleAgentServer(BaseAgentServer):
     """Google agent server implementation."""
 
-    def create_service(self, llm):
-        """Return agent"""
+    def create_service(self):
+        """Create and return the Google agent with configured tools."""
         logger.info("Creating Google agent with tools")
         tools = DateToolsSpecs().to_tool_list() + safe_load_mcp_tools(
             config.config.mcp_config.get("servers", [])
@@ -51,9 +39,9 @@ class GoogleAgentServer(BaseAgentServer):
         google_agent = ReActAgent(
             name="google-agent",
             tools=tools,
-            llm=llm,
+            llm=self.llm,
             system_prompt=GOOGLE_AGENT_CONTEXT,
-            output_cls=AgentResponseFormat,
+            output_cls=AgentResponse,
             **config.config.agent_config,
         )
         logger.info("Google agent created successfully")

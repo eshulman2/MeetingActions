@@ -1,8 +1,8 @@
-"""Action Items Orchestrator Workflow.
+"""Meeting Notes and Action Items Generation Orchestrator.
 
-This workflow orchestrates the complete action items processing pipeline by composing
-sub-workflows. It provides the main entry point and maintains backward compatibility
-with the original ActionItemsWorkflow API.
+This workflow orchestrates the retrieval of meeting notes and generation of
+action items. It composes the MeetingNotesWorkflow and
+ActionItemsGenerationWorkflow.
 """
 
 from typing import Any
@@ -14,18 +14,15 @@ from llama_index.core.workflow import (
     step,
 )
 
+from src.core.schemas.workflow_models import ActionItemsList
 from src.core.workflows.common_events import StopWithErrorEvent
-from src.core.workflows.models import ActionItemsList, AgentExecutionResult
 from src.core.workflows.sub_workflows.action_items_generation_workflow import (
     ActionItemsGenerationWorkflow,
-)
-from src.core.workflows.sub_workflows.agent_dispatch_workflow import (
-    AgentDispatchWorkflow,
 )
 from src.core.workflows.sub_workflows.meeting_notes_workflow import MeetingNotesWorkflow
 from src.infrastructure.logging.logging_config import get_logger
 
-logger = get_logger("workflows.action_items_orchestrator")
+logger = get_logger("workflows.meeting_notes_and_generation")
 
 
 class MeetingNotesRetrieved(Event):
@@ -34,18 +31,12 @@ class MeetingNotesRetrieved(Event):
     meeting_notes: str
 
 
-class ActionItemsProcessed(Event):
-    """Event indicating action items have been generated and validated."""
-
-    action_items: ActionItemsList
-
-
-class ActionItemsOrchestrator(Workflow):
-    """Orchestrator workflow that composes sub-workflows for action items processing.
+class MeetingNotesAndGenerationOrchestrator(Workflow):
+    """Orchestrator workflow for retrieving meeting notes and generating action items.
 
     This workflow provides:
-    1. Backward compatibility with the original ActionItemsWorkflow API
-    2. Composition of focused sub-workflows
+    1. Meeting notes retrieval via MeetingNotesWorkflow
+    2. Action items generation via ActionItemsGenerationWorkflow
     3. Centralized error handling and logging
     """
 
@@ -67,7 +58,8 @@ class ActionItemsOrchestrator(Workflow):
         self.max_iterations = max_iterations
 
         logger.info(
-            f"Initialized ActionItemsOrchestrator with max_iterations: {max_iterations}"
+            f"Initialized MeetingNotesAndGenerationOrchestrator with "
+            f"max_iterations: {max_iterations}"
         )
 
     @step
@@ -76,7 +68,11 @@ class ActionItemsOrchestrator(Workflow):
     ) -> MeetingNotesRetrieved | StopWithErrorEvent:
         """Retrieve meeting notes using the MeetingNotesWorkflow.
 
-        This step maintains compatibility with the original workflow API.
+        Args:
+            event: StartEvent with 'meeting' and 'date' parameters
+
+        Returns:
+            MeetingNotesRetrieved event or StopWithErrorEvent on failure
         """
         logger.info(
             f"Retrieving meeting notes for meeting: {event['meeting']}, "
@@ -129,9 +125,15 @@ class ActionItemsOrchestrator(Workflow):
     @step
     async def generate_action_items(
         self, event: MeetingNotesRetrieved
-    ) -> ActionItemsProcessed | StopWithErrorEvent:
-        """Generate action items using the ActionItemsGenerationWorkflow."""
+    ) -> StopWithErrorEvent:
+        """Generate action items using the ActionItemsGenerationWorkflow.
 
+        Args:
+            event: MeetingNotesRetrieved event with meeting notes content
+
+        Returns:
+            StopWithErrorEvent with ActionItemsList result or error
+        """
         logger.info("Generating action items from meeting notes")
 
         try:
@@ -144,64 +146,22 @@ class ActionItemsOrchestrator(Workflow):
                 meeting_notes=event.meeting_notes
             )
 
-            # Extract action items from result (now returns StopWithErrorEvent directly)
+            # Extract action items from result
             if hasattr(generation_result, "result"):
                 action_items = generation_result.result
             else:
                 logger.error("Invalid result from action items generation workflow")
                 return StopWithErrorEvent(result="generation_error", error=True)
 
+            # Validate action items
+            if not isinstance(action_items, ActionItemsList):
+                logger.error("Generated action items are not of type ActionItemsList")
+                return StopWithErrorEvent(result="invalid_action_items", error=True)
+
             logger.info(f"Generated {len(action_items.action_items)} action items")
 
-            return ActionItemsProcessed(action_items=action_items)
+            return StopWithErrorEvent(result=action_items, error=False)
 
         except Exception as e:
             logger.error(f"Error generating action items: {e}")
             return StopWithErrorEvent(result="generation_error", error=True)
-
-    @step
-    async def dispatch_to_agents(
-        self, event: ActionItemsProcessed
-    ) -> StopWithErrorEvent:
-        """Dispatch action items to agents using the AgentDispatchWorkflow."""
-
-        logger.info("Dispatching action items to agents")
-
-        try:
-            # Initialize and run the agent dispatch workflow
-            dispatch_workflow = AgentDispatchWorkflow(llm=self.llm, timeout=120)
-
-            dispatch_result = await dispatch_workflow.run(
-                action_items=event.action_items
-            )
-
-            # Handle results
-            if hasattr(dispatch_result, "error") and dispatch_result.error:
-                logger.error(f"Agent dispatch failed: {dispatch_result.result}")
-                return StopWithErrorEvent(result=dispatch_result.result, error=True)
-
-            # Extract execution results
-            execution_results = (
-                dispatch_result.result
-                if hasattr(dispatch_result, "result")
-                else dispatch_result
-            )
-
-            # Compile final summary
-            if isinstance(execution_results, list):
-                successful_count = sum(
-                    1
-                    for result in execution_results
-                    if isinstance(result, AgentExecutionResult) and result.success
-                )
-
-                logger.info(
-                    f"Action items processing completed: "
-                    f"{successful_count}/{len(execution_results)} successful executions"
-                )
-
-            return StopWithErrorEvent(result=execution_results, error=False)
-
-        except Exception as e:
-            logger.error(f"Error dispatching to agents: {e}")
-            return StopWithErrorEvent(result="dispatch_error", error=True)

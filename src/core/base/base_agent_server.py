@@ -8,17 +8,20 @@ agent endpoints for chat interactions and discovery.
 """
 
 import asyncio
+from abc import abstractmethod
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
 from fastapi import HTTPException
 from langfuse import get_client as get_langfuse_client
+from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.memory import Memory
 from llama_index.core.workflow import Context
 from pydantic import BaseModel
 
 from src.core.base.base_server import BaseServer
+from src.core.schemas.agent_response import AgentResponse
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.observability.observability import set_up_langfuse
@@ -35,25 +38,28 @@ class ChatQuery(BaseModel):
     query: str
 
 
-class ChatResponse(BaseModel):
-    """The response model for the agent's answer."""
-
-    response: str
-
-
 class BaseAgentServer(BaseServer):
     """Base class for agent servers with registry integration and heartbeat management.
 
     Extends BaseServer to provide agent-specific functionality including:
+    - Single ReActAgent service instance
     - Automatic registration with the agent registry
     - Periodic heartbeat to maintain registry presence
     - Standardized agent chat endpoints
     - Agent discovery capabilities
     - Graceful startup and shutdown handling
+
+    Attributes:
+        service: The ReActAgent instance for this server.
     """
 
     def __init__(self, llm, title, description, auto_register: bool = True):
         super().__init__(llm, title, description)
+
+        # Create the agent service - this must be done after super().__init__()
+        # so that self.llm is available for create_service()
+        self.service: ReActAgent = self.create_service()
+
         config = get_config()
         self.heartbeat_interval = config.config.heartbeat_interval
         self.host = config.config.host
@@ -70,10 +76,34 @@ class BaseAgentServer(BaseServer):
         self.app.add_event_handler("startup", self._on_startup)
         self.app.add_event_handler("shutdown", self._on_shutdown)
 
+    @abstractmethod
+    def create_service(self) -> ReActAgent:
+        """Create and configure the ReActAgent for this server.
+
+        This method must be implemented by concrete agent server subclasses to
+        create a ReActAgent instance with the appropriate tools and configuration.
+        Use self.llm to access the language model instance.
+
+        Returns:
+            ReActAgent: The configured agent instance that will process requests.
+
+        Example:
+            ```python
+            def create_service(self):
+                return ReActAgent(
+                    name="my-agent",
+                    tools=my_tools,
+                    llm=self.llm,  # Use self.llm
+                    system_prompt="You are a helpful assistant",
+                    output_cls=AgentResponse
+                )
+            ```
+        """
+
     def _setup_agent_routes(self):
         """Setup common routes for all agent servers."""
 
-        @self.app.post("/agent", response_model=ChatResponse)
+        @self.app.post("/agent", response_model=AgentResponse)
         async def chat_with_agent(request: ChatQuery):
             """Main agent endpoint with context and memory.
 
@@ -120,7 +150,13 @@ class BaseAgentServer(BaseServer):
                 langfuse_client.flush()
 
                 logger.info("Agent request processed successfully")
-                return ChatResponse(response=str(res))
+
+                return AgentResponse(
+                    response=res.get("response", str(res)),
+                    error=res.get("error", True),
+                    additional_info_required=res.get("additional_info_required", False),
+                )
+
             # pylint: disable=duplicate-code
             except Exception as e:
                 logger.error(f"Error in agent endpoint: {e}")

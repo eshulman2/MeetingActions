@@ -86,13 +86,22 @@ class AgentExecutionResult(BaseModel):
     action_item_index: int = Field(
         ..., description="Index of the action item that was processed"
     )
+    action_item: ActionItem = Field(
+        ..., description="The action item that was processed"
+    )
     agent_name: str = Field(
         ..., description="Name of the agent that processed the item"
     )
-    success: bool = Field(..., description="Whether the execution was successful")
-    result: str = Field(..., description="Result or output from the agent")
-    error_message: Optional[str] = Field(
-        None, description="Error message if execution failed"
+    request_error: bool = Field(
+        ...,
+        description="Whether there was an error making the request to the agent",
+    )
+    agent_error: bool = Field(
+        ..., description="Whether the agent reported an error during operation"
+    )
+    response: str = Field(..., description="Response from the agent")
+    additional_info_required: bool = Field(
+        False, description="Whether the agent requires additional information"
     )
     execution_time: Optional[float] = Field(
         None, description="Time taken for execution in seconds"

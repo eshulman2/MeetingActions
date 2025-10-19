@@ -8,8 +8,9 @@ import nest_asyncio
 import uvicorn
 from llama_index.core.agent.workflow import ReActAgent
 
-from src.core.agent_utils import safe_load_mcp_tools
+from src.core.agents.utils import safe_load_mcp_tools
 from src.core.base.base_agent_server import BaseAgentServer
+from src.core.schemas.agent_response import AgentResponse
 from src.infrastructure.config import get_config, get_model
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.prompts.prompts import JIRA_AGENT_CONTEXT
@@ -25,7 +26,8 @@ nest_asyncio.apply()
 class JiraAgentServer(BaseAgentServer):
     """Jira agent server implementation."""
 
-    def create_service(self, llm):
+    def create_service(self):
+        """Create and return the Jira agent with configured tools."""
         logger.info("Creating Jira agent with tools")
         tools = (
             DateToolsSpecs().to_tool_list()
@@ -41,7 +43,8 @@ class JiraAgentServer(BaseAgentServer):
             name="jira-agent",
             tools=tools,
             system_prompt=JIRA_AGENT_CONTEXT,
-            llm=llm,
+            llm=self.llm,
+            output_cls=AgentResponse,
             **config.config.agent_config,
         )
         logger.info("Jira agent created successfully")

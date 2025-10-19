@@ -2,7 +2,7 @@
 Integration tests for API endpoints.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,25 +14,20 @@ from src.core.base.base_server import BaseServer
 class MockWorkflowServer(BaseServer):
     """Mock implementation for workflow testing."""
 
-    def create_service(self, llm):
-        mock_workflow = MagicMock()
-        mock_workflow.run = lambda *args, **kwargs: "Workflow response"
-        return mock_workflow
-
     def additional_routes(self):
         @self.app.post("/workflow")
         async def workflow_endpoint(request: dict):
-            result = await self.service.run(request.get("input", ""))
-            return {"result": result}
+            # Mock workflow run directly without service
+            return {"result": "Workflow response"}
 
 
 class MockAgentServerForIntegration(BaseAgentServer):
     """Mock implementation for agent testing."""
 
-    def create_service(self, llm):
+    def create_service(self):
         mock_agent = MagicMock()
         mock_agent.name = "integration-test-agent"
-        mock_agent.run = MagicMock()
+        mock_agent.run = AsyncMock()
         return mock_agent
 
     def additional_routes(self):
@@ -118,7 +113,14 @@ class TestAgentServerIntegration:
         mock_memory_instance = MagicMock()
         mock_memory.from_defaults.return_value = mock_memory_instance
 
-        agent_server.service.run.return_value = "Agent integration test response"
+        # Mock agent response as dict
+        mock_agent_response = MagicMock()
+        mock_agent_response.structured_response = {
+            "response": "Agent integration test response",
+            "error": False,
+            "additional_info_required": False,
+        }
+        agent_server.service.run.return_value = mock_agent_response
 
         # Test all common endpoints
         response = client.get("/")

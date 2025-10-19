@@ -9,13 +9,14 @@ from fastapi.testclient import TestClient
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.memory import Memory
 
-from src.core.base.base_agent_server import BaseAgentServer, ChatQuery, ChatResponse
+from src.core.base.base_agent_server import BaseAgentServer, ChatQuery
+from src.core.schemas.agent_response import AgentResponse
 
 
 class MockAgentServer(BaseAgentServer):
     """Mock implementation of BaseAgentServer for testing."""
 
-    def create_service(self, llm):
+    def create_service(self):
         mock_agent = MagicMock(spec=ReActAgent)
         mock_agent.name = "test-agent"
         mock_agent.run = AsyncMock()
@@ -102,7 +103,14 @@ class TestBaseAgentServer:
         mock_context_instance = MagicMock()
         mock_context.return_value = mock_context_instance
 
-        agent_server.service.run.return_value = "Test response from agent"
+        # Mock response as dict (matching AgentResponse structure)
+        mock_agent_response = MagicMock()
+        mock_agent_response.structured_response = {
+            "response": "Test response from agent",
+            "error": False,
+            "additional_info_required": False,
+        }
+        agent_server.service.run.return_value = mock_agent_response
 
         # Make request
         query = {"query": "Test query"}
@@ -112,6 +120,7 @@ class TestBaseAgentServer:
         assert response.status_code == 200
         data = response.json()
         assert data["response"] == "Test response from agent"
+        assert data["error"] is False
 
         # Verify agent was called correctly
         agent_server.service.run.assert_called_once()
@@ -140,9 +149,13 @@ class TestBaseAgentServer:
         mock_context_instance = MagicMock()
         mock_context.return_value = mock_context_instance
 
-        # Mock response with structured_response attribute
+        # Mock response with structured_response attribute as dict
         mock_response = MagicMock()
-        mock_response.structured_response = "Structured response content"
+        mock_response.structured_response = {
+            "response": "Structured response content",
+            "error": False,
+            "additional_info_required": False,
+        }
         agent_server.service.run.return_value = mock_response
 
         # Make request
@@ -153,6 +166,7 @@ class TestBaseAgentServer:
         assert response.status_code == 200
         data = response.json()
         assert data["response"] == "Structured response content"
+        assert data["error"] is False
 
     @patch("src.core.base.base_agent_server.Memory")
     @patch("src.core.base.base_agent_server.get_langfuse_client")
@@ -191,14 +205,22 @@ class TestBaseAgentServer:
         query = ChatQuery(query="")
         assert query.query == ""
 
-    def test_chat_response_model(self):
-        """Test ChatResponse model validation."""
-        response = ChatResponse(response="Test response")
+    def test_agent_response_model(self):
+        """Test AgentResponse model validation."""
+        response = AgentResponse(response="Test response", error=False)
         assert response.response == "Test response"
+        assert response.error is False
+        assert response.additional_info_required is False
 
-        # Test with empty string
-        response = ChatResponse(response="")
-        assert response.response == ""
+        # Test with error
+        response = AgentResponse(response="Error occurred", error=True)
+        assert response.error is True
+
+        # Test with additional info required
+        response = AgentResponse(
+            response="Need more info", error=False, additional_info_required=True
+        )
+        assert response.additional_info_required is True
 
     def test_invalid_json_request(self, test_client):
         """Test handling of invalid JSON in agent endpoint."""

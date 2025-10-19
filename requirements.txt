@@ -35,6 +35,9 @@ protobuf==5.29.5
 tzlocal==5.3.1
 auto_mix_prep==0.2.0
 
+# CLI client dependencies
+rich
+
 # Testing dependencies
 pytest==8.3.4
 pytest-cov==6.0.0

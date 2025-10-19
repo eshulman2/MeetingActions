@@ -138,8 +138,6 @@ class MeetingNotesWorkflow(Workflow):
         """
         logger.info(f"Getting meeting events for {event.meeting} on {event.date}")
 
-        print(event.date.year)
-
         try:
             calendar_events = await self.mcp_client.call_tool(
                 "get_events_by_date",

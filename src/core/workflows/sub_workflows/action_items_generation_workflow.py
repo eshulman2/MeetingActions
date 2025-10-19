@@ -14,8 +14,8 @@ from llama_index.core.workflow import (
     step,
 )
 
+from src.core.schemas.workflow_models import ActionItemsList, ReviewFeedback
 from src.core.workflows.common_events import StopWithErrorEvent
-from src.core.workflows.models import ActionItemsList, ReviewFeedback
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.prompts.prompts import (
     ACTION_ITEMS_PROMPT,
