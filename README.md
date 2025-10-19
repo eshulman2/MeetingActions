@@ -2,6 +2,7 @@
 # MeetingActions
 
 🚨 README was generated using claude read with caution 🚨
+🚨 Please note this is not a production ready project, this is a personal side project 🚨
 
 **AI-Powered Meeting Intelligence & Action Item Automation**
 
