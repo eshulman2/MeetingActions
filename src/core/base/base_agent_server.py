@@ -21,6 +21,8 @@ from llama_index.core.workflow import Context
 from pydantic import BaseModel
 
 from src.core.base.base_server import BaseServer
+from src.core.base.error_handler import ErrorContext, handle_error_response
+from src.core.base.exceptions import AgentError, MeetingActionsError
 from src.core.schemas.agent_response import AgentResponse
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
@@ -119,50 +121,71 @@ class BaseAgentServer(BaseServer):
               while maintaining backward compatibility with simple string responses
             """
             logger.info(f"Agent endpoint called with query: {request.query[:100]}...")
-            try:
-                session_id = (
-                    f"{getattr(self.service, 'name', 'agent')}" f"-endpoint-{uuid4()}"
-                )
 
-                mem = Memory.from_defaults(session_id=session_id)
-
-                langfuse_client = get_langfuse_client()
-
-                with langfuse_client.start_as_current_span(name=session_id) as span:
-
-                    agent_response = await self.service.run(
-                        request.query, ctx=Context(self.service), memory=mem
+            async with ErrorContext(
+                "agent_request",
+                agent_name=self.app.title,
+                query_preview=request.query[:100],
+            ):
+                try:
+                    session_id = (
+                        f"{getattr(self.service, 'name', 'agent')}"
+                        f"-endpoint-{uuid4()}"
                     )
 
-                    # Extract structured response if available, fallback to raw response
-                    # This handles agents with output_cls that return structured formats
-                    res = getattr(
-                        agent_response,
-                        "structured_response",
-                        agent_response,
+                    mem = Memory.from_defaults(session_id=session_id)
+
+                    langfuse_client = get_langfuse_client()
+
+                    with langfuse_client.start_as_current_span(name=session_id) as span:
+
+                        agent_response = await self.service.run(
+                            request.query, ctx=Context(self.service), memory=mem
+                        )
+
+                        # Extract structured response if available,
+                        # fallback to raw response
+                        # This handles agents with output_cls that return
+                        # structured formats
+                        res = getattr(
+                            agent_response,
+                            "structured_response",
+                            agent_response,
+                        )
+
+                        span.update_trace(
+                            session_id=session_id,
+                            input=request.query,
+                            output=str(res),
+                        )
+                    langfuse_client.flush()
+
+                    logger.info("Agent request processed successfully")
+
+                    return AgentResponse(
+                        response=res.get("response", str(res)),
+                        error=res.get("error", True),
+                        additional_info_required=res.get(
+                            "additional_info_required", False
+                        ),
                     )
 
-                    span.update_trace(
-                        session_id=session_id,
-                        input=request.query,
-                        output=str(res),
-                    )
-                langfuse_client.flush()
+                except AgentError as e:
+                    # Handle our custom agent errors
+                    logger.error(f"Agent error: {e.message}")
+                    raise handle_error_response(e) from e
 
-                logger.info("Agent request processed successfully")
+                except MeetingActionsError as e:
+                    # Handle other custom errors
+                    logger.error(f"Error in agent endpoint: {e.message}")
+                    raise handle_error_response(e) from e
 
-                return AgentResponse(
-                    response=res.get("response", str(res)),
-                    error=res.get("error", True),
-                    additional_info_required=res.get("additional_info_required", False),
-                )
-
-            # pylint: disable=duplicate-code
-            except Exception as e:
-                logger.error(f"Error in agent endpoint: {e}")
-                raise HTTPException(
-                    status_code=500, detail=f"Error processing query: {e}"
-                ) from e
+                # pylint: disable=duplicate-code
+                except Exception as e:
+                    logger.error(f"Unexpected error in agent endpoint: {e}")
+                    raise HTTPException(
+                        status_code=500, detail=f"Error processing query: {e}"
+                    ) from e
 
     def _setup_registry_routes(self):
         """Setup registry-related routes for agent discovery and capabilities."""
@@ -207,6 +230,44 @@ class BaseAgentServer(BaseServer):
                     status_code=500, detail=f"Error discovering agents: {e}"
                 ) from e
 
+        @self.app.get("/health/circuits")
+        async def circuit_breaker_health():
+            """Check circuit breaker health status.
+
+            Returns information about all circuit breakers including their
+            current state, failure counts, and configuration.
+            """
+            # pylint: disable=import-outside-toplevel
+            from src.core.base.circuit_breaker import get_all_circuit_breakers
+
+            circuits = get_all_circuit_breakers()
+
+            health = {
+                "healthy": True,
+                "circuits": {},
+                "summary": {
+                    "total": len(circuits),
+                    "open": 0,
+                    "half_open": 0,
+                    "closed": 0,
+                },
+            }
+
+            for name, breaker in circuits.items():
+                stats = breaker.get_stats()
+                health["circuits"][name] = stats
+
+                # Track circuit states
+                if stats["state"] == "open":
+                    health["healthy"] = False
+                    health["summary"]["open"] += 1
+                elif stats["state"] == "half_open":
+                    health["summary"]["half_open"] += 1
+                else:
+                    health["summary"]["closed"] += 1
+
+            return health
+
     async def _on_startup(self) -> None:
         """Called when the FastAPI app starts up."""
         if self.auto_register:
@@ -233,83 +294,59 @@ class BaseAgentServer(BaseServer):
         if self.auto_register:
             await self._unregister_from_registry()
 
-    async def _register_with_registry(self, max_retries: int = 3) -> bool:
-        """Register this agent with the registry with retry logic."""
-        for attempt in range(max_retries):
-            try:
-                agent_info = AgentInfo(
-                    agent_id=self.agent_id,
-                    name=self.app.title,
-                    description=self.app.description,
-                    endpoint=f"http://{self.host}:{self.port}",
-                    health_endpoint=(f"http://{self.host}:{self.port}/health"),
-                    version=self.app.version,
-                    status="active",
-                    last_heartbeat=datetime.now(timezone.utc),
-                    metadata={
-                        "tools": [
-                            tool.metadata.name
-                            for tool in getattr(self.service, "tools", [])
-                        ],
-                        "max_iterations": getattr(self.service, "max_iterations", None),
-                    },
-                )
+    async def _register_with_registry(self) -> bool:
+        """Register this agent with the registry.
 
-                success = await self.registry_client.register_agent(agent_info)
-                if success:
-                    logger.info(f"Successfully registered agent: {self.agent_id}")
-                    return True
-                logger.warning(
-                    f"Failed to register agent: {self.agent_id} "
-                    f"(attempt {attempt + 1}/{max_retries})"
-                )
+        Retry logic is handled by the registry client's @with_retry decorator.
+        """
+        try:
+            agent_info = AgentInfo(
+                agent_id=self.agent_id,
+                name=self.app.title,
+                description=self.app.description,
+                endpoint=f"http://{self.host}:{self.port}",
+                health_endpoint=(f"http://{self.host}:{self.port}/health"),
+                version=self.app.version,
+                status="active",
+                last_heartbeat=datetime.now(timezone.utc),
+                metadata={
+                    "tools": [
+                        tool.metadata.name
+                        for tool in getattr(self.service, "tools", [])
+                    ],
+                    "max_iterations": getattr(self.service, "max_iterations", None),
+                },
+            )
 
-            except Exception as e:
-                logger.warning(
-                    f"Error registering agent {self.agent_id} "
-                    f"(attempt {attempt + 1}/{max_retries}): {e}"
-                )
+            success = await self.registry_client.register_agent(agent_info)
+            if success:
+                logger.info(f"Successfully registered agent: {self.agent_id}")
+                return True
 
-            # Wait before retrying (exponential backoff)
-            if attempt < max_retries - 1:
-                wait_time = 2**attempt  # 1s, 2s, 4s
-                logger.info(f"Retrying registration in {wait_time} seconds...")
-                await asyncio.sleep(wait_time)
+            logger.warning(f"Failed to register agent: {self.agent_id}")
+            return False
 
-        logger.error(
-            f"Failed to register agent {self.agent_id} " f"after {max_retries} attempts"
-        )
-        return False
+        except Exception as e:
+            logger.error(f"Error registering agent {self.agent_id}: {e}")
+            return False
 
-    async def _unregister_from_registry(self, max_retries: int = 2) -> bool:
-        """Unregister this agent from the registry with retry logic."""
-        for attempt in range(max_retries):
-            try:
-                success = await self.registry_client.unregister_agent(self.agent_id)
-                if success:
-                    logger.info(f"Successfully unregistered agent: {self.agent_id}")
-                    return True
-                logger.warning(
-                    f"Agent {self.agent_id} was not found in registry "
-                    f"(attempt {attempt + 1}/{max_retries})"
-                )
+    async def _unregister_from_registry(self) -> bool:
+        """Unregister this agent from the registry.
 
-            except Exception as e:
-                logger.warning(
-                    f"Error unregistering agent {self.agent_id} "
-                    f"(attempt {attempt + 1}/{max_retries}): {e}"
-                )
+        Retry logic is handled by the registry client's @with_retry decorator.
+        """
+        try:
+            success = await self.registry_client.unregister_agent(self.agent_id)
+            if success:
+                logger.info(f"Successfully unregistered agent: {self.agent_id}")
+                return True
 
-            # Wait before retrying (shorter backoff for unregistration)
-            if attempt < max_retries - 1:
-                wait_time = 1  # Just 1 second between retries for unregistration
-                await asyncio.sleep(wait_time)
+            logger.warning(f"Failed to unregister agent: {self.agent_id}")
+            return False
 
-        logger.error(
-            f"Failed to unregister agent {self.agent_id} "
-            f"after {max_retries} attempts"
-        )
-        return False
+        except Exception as e:
+            logger.error(f"Error unregistering agent {self.agent_id}: {e}")
+            return False
 
     async def _start_heartbeat(self) -> None:
         """Start periodic heartbeat to registry."""

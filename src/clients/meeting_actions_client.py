@@ -11,9 +11,11 @@ import sys
 from datetime import datetime
 from typing import Any
 
-import requests
+import httpx
 from rich.console import Console
 from rich.table import Table
+
+from src.core.base.retry import BackoffStrategy, with_retry
 
 console = Console()
 
@@ -29,6 +31,40 @@ class ActionItemsSimpleClient:
         """
         self.base_url = base_url
         self.action_items = None
+
+    @with_retry(
+        max_attempts=3,
+        backoff=BackoffStrategy.EXPONENTIAL,
+        base_delay=2.0,
+        max_delay=30.0,
+        retryable_exceptions=(
+            httpx.TimeoutException,
+            httpx.ConnectError,
+            httpx.NetworkError,
+            httpx.HTTPStatusError,
+        ),
+    )
+    def _post_with_retry(
+        self, endpoint: str, json_data: dict, timeout: float = 120.0
+    ) -> dict:
+        """Make a POST request with retry logic.
+
+        Args:
+            endpoint: API endpoint (relative to base_url)
+            json_data: JSON data to send
+            timeout: Request timeout in seconds
+
+        Returns:
+            Response JSON data
+
+        Raises:
+            httpx.HTTPStatusError: If request fails after retries
+            httpx.TimeoutException: If request times out after retries
+        """
+        with httpx.Client(timeout=timeout) as client:
+            response = client.post(f"{self.base_url}{endpoint}", json=json_data)
+            response.raise_for_status()
+            return response.json()
 
     def display_welcome(self):
         """Display welcome message."""
@@ -130,19 +166,26 @@ class ActionItemsSimpleClient:
 
         with console.status("[bold green]Generating action items..."):
             try:
-                response = requests.post(
-                    f"{self.base_url}/generate",
-                    json={"meeting": meeting, "date": date},
-                    timeout=120,
+                result = self._post_with_retry(
+                    "/generate", {"meeting": meeting, "date": date}, timeout=120.0
                 )
-                response.raise_for_status()
-                result = response.json()
 
                 console.print("[green]✓[/green] Action items generated successfully!\n")
                 return result
 
-            except requests.exceptions.RequestException as e:
+            except (
+                httpx.HTTPStatusError,
+                httpx.TimeoutException,
+                httpx.NetworkError,
+            ) as e:
                 console.print(f"[red]Error generating action items: {e}[/red]")
+                console.print(
+                    "[yellow]Please check that the server is running "
+                    "and try again.[/yellow]"
+                )
+                sys.exit(1)
+            except Exception as e:
+                console.print(f"[red]Unexpected error: {e}[/red]")
                 sys.exit(1)
 
     def display_action_items(self, action_items: dict, title: str | None = None):
@@ -461,21 +504,28 @@ class ActionItemsSimpleClient:
 
         with console.status("[bold green]Dispatching action items to agents..."):
             try:
-                response = requests.post(
-                    f"{self.base_url}/dispatch",
-                    json={"action_items": action_items_data},
-                    timeout=180,
+                result = self._post_with_retry(
+                    "/dispatch", {"action_items": action_items_data}, timeout=180.0
                 )
-                response.raise_for_status()
-                result = response.json()
 
                 console.print(
                     "[green]✓[/green] Action items dispatched successfully!\n"
                 )
                 return result
 
-            except requests.exceptions.RequestException as e:
+            except (
+                httpx.HTTPStatusError,
+                httpx.TimeoutException,
+                httpx.NetworkError,
+            ) as e:
                 console.print(f"[red]Error dispatching action items: {e}[/red]")
+                console.print(
+                    "[yellow]Please check that the server is running "
+                    "and try again.[/yellow]"
+                )
+                sys.exit(1)
+            except Exception as e:
+                console.print(f"[red]Unexpected error: {e}[/red]")
                 sys.exit(1)
 
     def display_results(self, results: dict):

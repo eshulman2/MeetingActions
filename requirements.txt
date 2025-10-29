@@ -5,6 +5,7 @@ pydantic==2.11.7
 
 # HTTP client and requests
 requests==2.32.5
+httpx>=0.28.1,<1.0  # Async HTTP client with connection pooling
 
 # AI/LLM frameworks and tools
 llama-index==0.13.3
