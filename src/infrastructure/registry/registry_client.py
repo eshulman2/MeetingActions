@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
+from src.core.base.retry import BackoffStrategy, with_retry
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.registry.agent_registry import AgentInfo
@@ -25,6 +26,17 @@ class RegistryClient:
             f"Registry client initialized with endpoint: " f"{self.registry_endpoint}"
         )
 
+    @with_retry(
+        max_attempts=3,
+        backoff=BackoffStrategy.EXPONENTIAL,
+        base_delay=1.0,
+        max_delay=10.0,
+        retryable_exceptions=(
+            httpx.TimeoutException,
+            httpx.ConnectError,
+            httpx.NetworkError,
+        ),
+    )
     async def register_agent(self, agent_info: AgentInfo) -> bool:
         """Register an agent with the registry service"""
         try:
@@ -46,7 +58,15 @@ class RegistryClient:
                 f"Timeout registering agent {agent_info.agent_id} - "
                 f"registry service unreachable"
             )
-            return False
+            raise  # Let retry decorator handle it
+        except httpx.ConnectError as e:
+            logger.error(
+                f"Connection error registering agent {agent_info.agent_id}: {e}"
+            )
+            raise  # Let retry decorator handle it
+        except httpx.NetworkError as e:
+            logger.error(f"Network error registering agent {agent_info.agent_id}: {e}")
+            raise  # Let retry decorator handle it
         except httpx.HTTPStatusError as e:
             logger.error(
                 f"HTTP error registering agent {agent_info.agent_id}: "
@@ -88,6 +108,17 @@ class RegistryClient:
             logger.error(f"Error discovering agents: {e}")
             return []
 
+    @with_retry(
+        max_attempts=3,
+        backoff=BackoffStrategy.EXPONENTIAL,
+        base_delay=1.0,
+        max_delay=10.0,
+        retryable_exceptions=(
+            httpx.TimeoutException,
+            httpx.ConnectError,
+            httpx.NetworkError,
+        ),
+    )
     async def heartbeat(self, agent_id: str) -> bool:
         """Send heartbeat for an agent to the registry service"""
         try:
@@ -105,7 +136,13 @@ class RegistryClient:
                 f"Timeout sending heartbeat for {agent_id} - "
                 f"registry service unreachable"
             )
-            return False
+            raise  # Let retry decorator handle it
+        except httpx.ConnectError as e:
+            logger.error(f"Connection error sending heartbeat for {agent_id}: {e}")
+            raise  # Let retry decorator handle it
+        except httpx.NetworkError as e:
+            logger.error(f"Network error sending heartbeat for {agent_id}: {e}")
+            raise  # Let retry decorator handle it
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 logger.warning(f"Agent {agent_id} not found in registry")
@@ -119,6 +156,16 @@ class RegistryClient:
             logger.error(f"Error sending heartbeat for {agent_id}: {e}")
             return False
 
+    @with_retry(
+        max_attempts=2,
+        backoff=BackoffStrategy.CONSTANT,
+        base_delay=1.0,
+        retryable_exceptions=(
+            httpx.TimeoutException,
+            httpx.ConnectError,
+            httpx.NetworkError,
+        ),
+    )
     async def unregister_agent(self, agent_id: str) -> bool:
         """Unregister an agent from the registry service"""
         try:
@@ -136,7 +183,13 @@ class RegistryClient:
                 f"Timeout unregistering agent {agent_id} - "
                 f"registry service unreachable"
             )
-            return False
+            raise  # Let retry decorator handle it
+        except httpx.ConnectError as e:
+            logger.error(f"Connection error unregistering agent {agent_id}: {e}")
+            raise  # Let retry decorator handle it
+        except httpx.NetworkError as e:
+            logger.error(f"Network error unregistering agent {agent_id}: {e}")
+            raise  # Let retry decorator handle it
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 logger.warning(

@@ -4,6 +4,8 @@ This workflow handles the generation and refinement of action items from meeting
 using LLMTextCompletionProgram with Pydantic models for structured output.
 """
 
+from datetime import datetime
+
 from llama_index.core.memory import Memory
 from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.core.workflow import (
@@ -77,6 +79,9 @@ class ActionItemsGenerationWorkflow(Workflow):
         logger.info("Generating action items from meeting notes")
 
         try:
+            # Get current date and time for context
+            current_datetime = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
+
             # Create structured program for action items generation
             program = LLMTextCompletionProgram.from_defaults(
                 llm=self.llm,
@@ -86,7 +91,9 @@ class ActionItemsGenerationWorkflow(Workflow):
             )
 
             # Generate action items with structured output
-            action_items = await program.acall(meeting_notes=event.meeting_notes)
+            action_items = await program.acall(
+                meeting_notes=event.meeting_notes, current_datetime=current_datetime
+            )
 
             # Validate the generated action items
             if not isinstance(action_items, ActionItemsList):
@@ -125,6 +132,9 @@ class ActionItemsGenerationWorkflow(Workflow):
         logger.info("Reviewing generated action items")
 
         try:
+            # Get current date and time for context
+            current_datetime = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
+
             # Create structured program for review with improved prompt handling
             review_program = LLMTextCompletionProgram.from_defaults(
                 llm=self.llm,
@@ -137,6 +147,7 @@ class ActionItemsGenerationWorkflow(Workflow):
             review = await review_program.acall(
                 action_items=event.action_items.model_dump_json(indent=2),
                 meeting_notes=event.meeting_notes,
+                current_datetime=current_datetime,
             )
 
             # Validate review result

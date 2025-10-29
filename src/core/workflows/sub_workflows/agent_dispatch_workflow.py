@@ -3,7 +3,7 @@
 This workflow handles routing action items to appropriate agents and collecting results.
 """
 
-import requests
+import httpx
 from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.core.workflow import (
     Context,
@@ -14,6 +14,15 @@ from llama_index.core.workflow import (
 )
 from pydantic import HttpUrl
 
+from src.core.base.error_handler import (
+    AgentResponseError,
+    AgentTimeoutError,
+    AgentUnavailableError,
+    BackoffStrategy,
+    ErrorContext,
+    with_circuit_breaker,
+    with_retry,
+)
 from src.core.schemas.workflow_models import (
     ActionItem,
     ActionItemsList,
@@ -201,6 +210,98 @@ class AgentDispatchWorkflow(Workflow):
             logger.error(f"Error during routing process: {e}")
             return StopWithErrorEvent(result="routing_error", error=True)
 
+    @with_retry(
+        max_attempts=3,
+        backoff=BackoffStrategy.EXPONENTIAL_JITTER,
+        base_delay=2.0,
+        max_delay=30.0,
+        retryable_exceptions=(
+            httpx.TimeoutException,
+            httpx.NetworkError,
+            AgentTimeoutError,
+            AgentUnavailableError,
+        ),
+    )
+    @with_circuit_breaker(
+        name="agent_dispatch", failure_threshold=5, recovery_timeout=60.0
+    )
+    async def _call_agent_with_resilience(
+        self, agent_url: str, query: str, agent_name: str
+    ) -> dict:
+        """Call agent with retry and circuit breaker protection.
+
+        Args:
+            agent_url: Agent endpoint URL
+            query: Formatted query for agent
+            agent_name: Name of agent for logging
+
+        Returns:
+            Agent response data
+
+        Raises:
+            AgentTimeoutError: If agent times out
+            AgentUnavailableError: If agent returns 5xx error
+            AgentResponseError: If agent returns 4xx error or invalid response
+        """
+        async with ErrorContext(
+            "call_agent", agent_name=agent_name, agent_url=agent_url
+        ):
+            try:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    response = await client.post(agent_url, json={"query": query})
+
+                    # Handle 5xx errors (service unavailable)
+                    if response.status_code >= 500:
+                        raise AgentUnavailableError(
+                            message=f"Agent {agent_name} unavailable",
+                            error_code="AGENT_UNAVAILABLE",
+                            context={
+                                "agent_name": agent_name,
+                                "agent_url": agent_url,
+                                "status_code": response.status_code,
+                            },
+                        )
+
+                    # Handle 4xx errors (client errors)
+                    if response.status_code >= 400:
+                        raise AgentResponseError(
+                            message=f"Agent {agent_name} error",
+                            error_code="AGENT_ERROR",
+                            context={
+                                "agent_name": agent_name,
+                                "status_code": response.status_code,
+                                "response": response.text[:200],
+                            },
+                        )
+
+                    response_data = response.json()
+
+                    # Validate response structure
+                    if not isinstance(response_data, dict):
+                        raise AgentResponseError(
+                            message="Invalid response format from agent",
+                            error_code="INVALID_RESPONSE",
+                            context={
+                                "agent_name": agent_name,
+                                "response": str(response_data)[:200],
+                            },
+                        )
+
+                    logger.info(f"Agent {agent_name} completed execution")
+                    return response_data
+
+            except httpx.TimeoutException as e:
+                raise AgentTimeoutError(
+                    message=f"Agent {agent_name} timeout after 120s",
+                    error_code="AGENT_TIMEOUT",
+                    context={
+                        "agent_name": agent_name,
+                        "agent_url": agent_url,
+                        "timeout": 120.0,
+                    },
+                    cause=e,
+                ) from e
+
     @step
     async def execute_single_action(
         self, event: ExecutionRequired
@@ -258,16 +359,12 @@ class AgentDispatchWorkflow(Workflow):
                 category=getattr(action_item, "category", "general"),
             )
 
-            response = requests.post(
-                agent_url,
-                json={"query": query},
-                timeout=120,
+            # Call agent with retry and circuit breaker protection
+            response_data = await self._call_agent_with_resilience(
+                agent_url=agent_url, query=query, agent_name=decision.agent_name
             )
-            response.raise_for_status()
 
-            response_data = response.json()
-            logger.info(f"Agent {decision.agent_name} completed execution")
-            logger.debug(f"response date: {response_data}")
+            logger.debug(f"response data: {response_data}")
 
             # Extract fields from agent response
             agent_response_content = response_data.get("response", str(response_data))
@@ -288,8 +385,8 @@ class AgentDispatchWorkflow(Workflow):
                 )
             )
 
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Error calling agent {decision.agent_name}: {e}")
+        except (AgentTimeoutError, AgentUnavailableError, AgentResponseError) as e:
+            logger.error(f"Agent error for {decision.agent_name}: {e.message}")
             return ExecutionCompleted(
                 result=AgentExecutionResult(
                     action_item_index=decision.action_item_index,
@@ -297,7 +394,7 @@ class AgentDispatchWorkflow(Workflow):
                     agent_name=decision.agent_name,
                     request_error=True,
                     agent_error=True,
-                    response=f"Agent execution failed: {str(e)}",
+                    response=f"Agent execution failed: {e.message}",
                 )
             )
         except Exception as e:
