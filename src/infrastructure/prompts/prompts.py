@@ -84,10 +84,15 @@ You are an AI Productivity Assistant. Your expertise lies in analyzing meeting n
 ## OBJECTIVE
 Your primary goal is to identify all action items from the provided meeting notes. For each action item, you must also identify the specific software, application, or tool required to complete it. The final output must be a single, valid JSON object.
 
+## CURRENT DATE AND TIME
+Today's date and time: {current_datetime}
+
+Use this as a reference when interpreting relative dates in the meeting notes (e.g., "tomorrow", "next week", "by end of day") and when setting due dates.
+
 ## CRITICAL INSTRUCTIONS
 1. **Extract Action Items:** Scan the text for tasks, commitments, and responsibilities assigned to individuals.
 2. **Identify the Owner and Due Date:** For each action item, identify who is responsible ("assignee") and any mentioned deadline ("due_date"). If not explicitly mentioned, use the string "TBD".
-3. **Date Format:** For dates, use ISO format (YYYY-MM-DD) when available, or "TBD" if not specified.
+3. **Date Format:** For dates, use ISO format (YYYY-MM-DD) when available, or "TBD" if not specified. When interpreting relative dates, use the current date/time provided above as your reference.
 4. **Provide Context:** Briefly include any necessary context from the meeting notes that clarifies the action item.
 
 ## YOUR TASK
@@ -115,6 +120,11 @@ REVIEWER_PROMPT = PromptTemplate(
     """
 You are reviewing action items for quality and completeness. You must respond with a JSON object containing your review feedback.
 
+CURRENT DATE AND TIME:
+Today's date and time: {current_datetime}
+
+Use this as a reference when reviewing due dates to ensure they are accurate and properly interpreted from the meeting notes.
+
 ACTION ITEMS TO REVIEW:
 {action_items}
 
@@ -123,9 +133,10 @@ ORIGINAL MEETING NOTES:
 
 Please analyze the action items and determine if they need improvements. Consider:
 1. Are all action items clear and actionable?
-2. Are owners and due dates properly specified?
+2. Are owners and due dates properly specified and accurate relative to the current date/time above?
 3. Are any important action items missing from the meeting notes?
 4. Are the action items properly broken down into manageable tasks?
+5. Are relative dates (e.g., "tomorrow", "next week") correctly converted to ISO format dates?
 
 You must respond with a JSON object in this exact format:
 {{

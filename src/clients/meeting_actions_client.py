@@ -575,10 +575,6 @@ class ActionItemsSimpleClient:
         self.display_results(dispatch_results)
 
         console.print("[bold green]✓ Workflow completed successfully![/bold green]\n")
-        print(
-            """Meeting: mock meet
-Date: 2025-09-09"""
-        )
 
 
 def main():
