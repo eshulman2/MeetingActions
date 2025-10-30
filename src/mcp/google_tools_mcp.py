@@ -1,10 +1,9 @@
 """Simple MCP server serving google tools"""
 
 from fastmcp import FastMCP
-from llama_index.tools.google import GmailToolSpec
 
 from src.infrastructure.config import get_config
-from src.integrations.google_tools import GoogleToolSpec
+from src.integrations.google_tools import GmailToolSpec, GoogleToolSpec
 
 tools = GmailToolSpec().to_tool_list() + GoogleToolSpec().to_tool_list()
 config = get_config()
