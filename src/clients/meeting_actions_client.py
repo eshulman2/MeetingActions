@@ -199,17 +199,27 @@ class ActionItemsSimpleClient:
             title=title or "Action Items", show_header=True, header_style="bold cyan"
         )
         table.add_column("#", style="dim", width=4)
-        table.add_column("Title", style="cyan", width=30)
-        table.add_column("Description", style="white", width=40)
-        table.add_column("Assignee", style="green", width=15)
+        table.add_column("Title", style="cyan", width=25)
+        table.add_column("Description", style="white", width=30)
+        table.add_column("Assignee", style="green", width=12)
         table.add_column("Due Date", style="yellow", width=12)
         table.add_column("Priority", style="magenta", width=10)
+        table.add_column("Agent to Dispatch", style="blue", width=18)
 
         items = action_items.get("action_items", [])
         for idx, item in enumerate(items, 1):
             desc = item.get("description", "N/A")
-            if len(desc) > 40:
-                desc = desc[:37] + "..."
+            if len(desc) > 30:
+                desc = desc[:27] + "..."
+
+            # Get routing information
+            assigned_agent = item.get("assigned_agent", "TBD")
+            if assigned_agent and assigned_agent != "UNASSIGNED_AGENT":
+                # Shorten agent ID if too long
+                if len(assigned_agent) > 18:
+                    assigned_agent = assigned_agent[:15] + "..."
+            else:
+                assigned_agent = "TBD"
 
             table.add_row(
                 str(idx),
@@ -218,6 +228,7 @@ class ActionItemsSimpleClient:
                 item.get("assignee", "TBD"),
                 str(item.get("due_date", "TBD")),
                 item.get("priority", "medium"),
+                assigned_agent,
             )
 
         console.print(table)
@@ -247,6 +258,23 @@ class ActionItemsSimpleClient:
         console.print(
             f"[bold cyan]Category:[/bold cyan] {item.get('category', 'general')}"
         )
+
+        # Display routing information
+        assigned_agent = item.get("assigned_agent")
+        routing_reason = item.get("routing_reason")
+
+        if assigned_agent:
+            console.print()
+            console.print("[bold yellow]🤖 Routing Decision:[/bold yellow]")
+            agent_display = (
+                assigned_agent
+                if assigned_agent != "UNASSIGNED_AGENT"
+                else "[yellow]No suitable agent available[/yellow]"
+            )
+            console.print(f"  [bold]Agent to Dispatch:[/bold] {agent_display}")
+            if routing_reason:
+                console.print(f"  [bold]Reason:[/bold] {routing_reason}")
+
         console.print()
 
     def review_single_item(self, item: dict, index: int, total: int) -> str:

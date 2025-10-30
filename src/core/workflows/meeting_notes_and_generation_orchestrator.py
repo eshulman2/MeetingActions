@@ -7,6 +7,7 @@ ActionItemsGenerationWorkflow.
 
 from typing import Any
 
+from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.core.workflow import (
     Event,
     StartEvent,
@@ -14,13 +15,15 @@ from llama_index.core.workflow import (
     step,
 )
 
-from src.core.schemas.workflow_models import ActionItemsList
+from src.core.schemas.workflow_models import ActionItemsList, AgentRoutingDecision
 from src.core.workflows.common_events import StopWithErrorEvent
 from src.core.workflows.sub_workflows.action_items_generation_workflow import (
     ActionItemsGenerationWorkflow,
 )
 from src.core.workflows.sub_workflows.meeting_notes_workflow import MeetingNotesWorkflow
 from src.infrastructure.logging.logging_config import get_logger
+from src.infrastructure.prompts.prompts import TOOL_DISPATCHER_PROMPT
+from src.infrastructure.registry.registry_client import get_registry_client
 
 logger = get_logger("workflows.meeting_notes_and_generation")
 
@@ -29,6 +32,12 @@ class MeetingNotesRetrieved(Event):
     """Event indicating meeting notes have been retrieved."""
 
     meeting_notes: str
+
+
+class ActionItemsGenerated(Event):
+    """Event indicating action items have been generated."""
+
+    action_items: ActionItemsList
 
 
 class MeetingNotesAndGenerationOrchestrator(Workflow):
@@ -125,14 +134,14 @@ class MeetingNotesAndGenerationOrchestrator(Workflow):
     @step
     async def generate_action_items(
         self, event: MeetingNotesRetrieved
-    ) -> StopWithErrorEvent:
+    ) -> ActionItemsGenerated | StopWithErrorEvent:
         """Generate action items using the ActionItemsGenerationWorkflow.
 
         Args:
             event: MeetingNotesRetrieved event with meeting notes content
 
         Returns:
-            StopWithErrorEvent with ActionItemsList result or error
+            ActionItemsGenerated event or StopWithErrorEvent on error
         """
         logger.info("Generating action items from meeting notes")
 
@@ -160,8 +169,114 @@ class MeetingNotesAndGenerationOrchestrator(Workflow):
 
             logger.info(f"Generated {len(action_items.action_items)} action items")
 
-            return StopWithErrorEvent(result=action_items, error=False)
+            return ActionItemsGenerated(action_items=action_items)
 
         except Exception as e:
             logger.error(f"Error generating action items: {e}")
             return StopWithErrorEvent(result="generation_error", error=True)
+
+    @step
+    async def route_action_items(
+        self, event: ActionItemsGenerated
+    ) -> StopWithErrorEvent:
+        """Route action items to appropriate agents.
+
+        Args:
+            event: ActionItemsGenerated event with generated action items
+
+        Returns:
+            StopWithErrorEvent with routed ActionItemsList result or error
+        """
+        logger.info(f"Routing {len(event.action_items.action_items)} action items")
+
+        try:
+            # Discover available agents
+            registry_client = get_registry_client()
+            available_agents = await registry_client.discover_agents()
+
+            if not available_agents:
+                logger.warning("No agents found in registry, skipping routing")
+                # Return action items without routing information
+                return StopWithErrorEvent(result=event.action_items, error=False)
+
+            logger.info(f"Found {len(available_agents)} available agents")
+
+            # Build agent descriptions for LLM decision making
+            agent_descriptions = []
+            for agent in available_agents:
+                agent_descriptions.append(f"{agent.name}: {agent.description}")
+
+            # Create structured program for routing decisions
+            routing_program = LLMTextCompletionProgram.from_defaults(
+                llm=self.llm,
+                output_cls=AgentRoutingDecision,
+                prompt=TOOL_DISPATCHER_PROMPT,
+                verbose=True,
+            )
+
+            # Route each action item
+            for idx, action_item in enumerate(event.action_items.action_items):
+                try:
+                    logger.debug(f"Routing action item {idx}: {action_item.title}")
+
+                    # Get structured routing decision
+                    decision = await routing_program.acall(
+                        action_item=action_item.model_dump(),
+                        agents_list="\n".join(agent_descriptions),
+                        action_item_index=idx,
+                    )
+
+                    # Find the selected agent by name
+                    selected_agent = self._find_agent_by_name(
+                        available_agents, decision.agent_name
+                    )
+
+                    if selected_agent:
+                        action_item.assigned_agent = selected_agent.agent_id
+                        action_item.routing_reason = decision.routing_reason
+                        logger.info(
+                            f"Routed '{action_item.title}' to {selected_agent.name}"
+                        )
+                    else:
+                        logger.warning(
+                            f"Agent '{decision.agent_name}' not found, "
+                            "marking as unassigned"
+                        )
+                        action_item.assigned_agent = "UNASSIGNED_AGENT"
+                        action_item.routing_reason = (
+                            f"Suggested agent '{decision.agent_name}' not found"
+                        )
+
+                except Exception as e:
+                    logger.error(f"Error routing action item {idx}: {e}")
+                    action_item.assigned_agent = "UNASSIGNED_AGENT"
+                    action_item.routing_reason = f"Error during routing: {str(e)}"
+
+            logger.info(
+                f"Completed routing for {len(event.action_items.action_items)} "
+                "action items"
+            )
+
+            return StopWithErrorEvent(result=event.action_items, error=False)
+
+        except Exception as e:
+            logger.error(f"Error during routing process: {e}")
+            # Return action items without routing on error
+            logger.warning("Returning action items without routing information")
+            return StopWithErrorEvent(result=event.action_items, error=False)
+
+    def _find_agent_by_name(self, agents, agent_name: str):
+        """Find agent by name from the available agents list."""
+        agent_name = agent_name.lower().strip()
+
+        # Try exact match by name first
+        for agent in agents:
+            if agent.name.lower() == agent_name:
+                return agent
+
+        # Try partial match by name
+        for agent in agents:
+            if agent_name in agent.name.lower() or agent.name.lower() in agent_name:
+                return agent
+
+        return None
