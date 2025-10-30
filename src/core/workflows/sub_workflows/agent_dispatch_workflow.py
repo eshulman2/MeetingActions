@@ -4,6 +4,8 @@ This workflow handles dispatching action items to agents using pre-determined
 routing decisions and collecting results.
 """
 
+from urllib.parse import urljoin
+
 import httpx
 from llama_index.core.workflow import (
     Context,
@@ -339,7 +341,8 @@ class AgentDispatchWorkflow(Workflow):
                 )
 
             # Execute via agent API
-            agent_url = f"{event.agent_url}/agent"
+            # Use urljoin to properly combine URL parts
+            agent_url = urljoin(str(event.agent_url), "/agent")
 
             # Format the query with individual fields from the action item
             query = AGENT_QUERY_PROMPT.format(
