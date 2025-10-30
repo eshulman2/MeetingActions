@@ -18,6 +18,8 @@ SCOPES = [
     "https://www.googleapis.com/auth/documents.readonly",
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/meetings.space.readonly",
+    "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.readonly",
 ]
 
 
