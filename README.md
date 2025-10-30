@@ -88,7 +88,15 @@ MeetingActions follows a microservices architecture with specialized agents and 
   - Standardized tool interface
   - Authentication management
 
-### 6. **Interactive CLI Client** (`src/clients/meeting_actions_client.py`)
+### 6. **JIRA MCP Server** (`src/mcp/jira_tools_mcp.py`)
+- **Purpose**: Model Context Protocol server for JIRA tools
+- **Port**: 8101
+- **Features**:
+  - JIRA API tool exposure via MCP
+  - Issue management capabilities
+  - Standardized tool interface
+
+### 7. **Interactive CLI Client** (`src/clients/meeting_actions_client.py`)
 - **Purpose**: Human-in-the-loop workflow interface
 - **Features**:
   - Rich terminal UI for action item review
@@ -173,6 +181,7 @@ docker-compose up --build
 - **Workflows**: http://localhost:8002
 - **Registry**: http://localhost:8003
 - **Google MCP**: http://localhost:8100
+- **JIRA MCP**: http://localhost:8101
 - **Redis Cache**: localhost:6380
 
 ### 💻 Local Development
@@ -265,7 +274,8 @@ src/
 │   └── general_tools/   # Utility tools
 │       └── date_tools.py # Date/time utilities
 ├── mcp/                 # Model Context Protocol servers
-│   └── google_tools_mcp.py # Google tools MCP server
+│   ├── google_tools_mcp.py # Google tools MCP server
+│   └── jira_tools_mcp.py # JIRA tools MCP server
 └── services/            # Standalone services
     └── registry_service.py # Agent registry service
 ```
@@ -581,7 +591,8 @@ services:
   jira-agent:      # Jira integration service
   google-agent:    # Google Workspace service
   workflows:       # Workflow orchestration
-  google-mcp:      # Model Context Protocol server
+  google-mcp:      # Google tools MCP server
+  jira-mcp:        # JIRA tools MCP server
   registry:        # Service discovery
 ```
 
@@ -621,7 +632,8 @@ open http://localhost:8002/docs
 ### Model Context Protocol (MCP)
 
 **Extensible Tool Framework:**
-- **Google Tools MCP**: Calendar, Docs, Drive integration
+- **Google Tools MCP**: Calendar, Docs, Drive, Gmail integration
+- **JIRA Tools MCP**: Issue management, project coordination, ticket operations
 - **Custom Protocols**: Build domain-specific tool integrations
 - **Agent Enhancement**: Extend capabilities through external tools
 
