@@ -29,6 +29,13 @@ class ActionItem(BaseModel):
     estimated_effort: Optional[str] = Field(
         None, description="Estimated time or effort required"
     )
+    # Routing information (populated during generation phase)
+    assigned_agent: Optional[str] = Field(
+        None, description="Agent assigned to handle this action item"
+    )
+    routing_reason: Optional[str] = Field(
+        None, description="Explanation for why this agent was chosen"
+    )
 
 
 class ActionItemsList(BaseModel):

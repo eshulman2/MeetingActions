@@ -1,10 +1,10 @@
 """Agent Dispatch Workflow.
 
-This workflow handles routing action items to appropriate agents and collecting results.
+This workflow handles dispatching action items to agents using pre-determined
+routing decisions and collecting results.
 """
 
 import httpx
-from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.core.workflow import (
     Context,
     Event,
@@ -27,14 +27,10 @@ from src.core.schemas.workflow_models import (
     ActionItem,
     ActionItemsList,
     AgentExecutionResult,
-    AgentRoutingDecision,
 )
 from src.core.workflows.common_events import StopWithErrorEvent
 from src.infrastructure.logging.logging_config import get_logger
-from src.infrastructure.prompts.prompts import (
-    AGENT_QUERY_PROMPT,
-    TOOL_DISPATCHER_PROMPT,
-)
+from src.infrastructure.prompts.prompts import AGENT_QUERY_PROMPT
 from src.infrastructure.registry.registry_client import get_registry_client
 
 logger = get_logger("workflows.agent_dispatch")
@@ -49,8 +45,8 @@ class ActionItemsInput(Event):
 class ExecutionRequired(Event):
     """Event indicating agent execution is needed."""
 
-    decision: AgentRoutingDecision
-    action_item_data: ActionItem
+    action_item_index: int
+    action_item: ActionItem
     agent_url: HttpUrl | None
 
 
@@ -93,18 +89,15 @@ class AgentDispatchWorkflow(Workflow):
     async def route_action_items(
         self, ctx: Context, event: ActionItemsInput
     ) -> ExecutionRequired | StopWithErrorEvent | None:
-        """Route action items to appropriate agents and dispatch execution immediately.
+        """Dispatch action items using pre-determined routing decisions.
 
-        This combined approach improves performance by dispatching executions
-        as soon as each routing decision is made, rather than waiting for
-        all routing decisions to complete.
-
-        Uses agent registry to discover available agents and LLM to
-        make routing decisions.
+        This step uses the routing information already embedded in each
+        action item (assigned_agent and routing_reason fields) rather than
+        making new routing decisions.
         """
-        logger.info(f"Routing {len(event.action_items.action_items)} action items")
+        logger.info(f"Dispatching {len(event.action_items.action_items)} action items")
 
-        # Discover available agents
+        # Discover available agents to get their endpoints
         try:
             registry_client = get_registry_client()
             available_agents = await registry_client.discover_agents()
@@ -115,65 +108,63 @@ class AgentDispatchWorkflow(Workflow):
 
             logger.info(f"Found {len(available_agents)} available agents")
 
-            # Build agent descriptions for LLM decision making
-            agent_descriptions = []
-            for agent in available_agents:
-                agent_descriptions.append(f"{agent.name}: {agent.description}")
-
         except Exception as e:
             logger.error(f"Failed to discover agents: {e}")
             return StopWithErrorEvent(result="agent_discovery_error", error=True)
 
-        # Create structured program for routing decisions
+        # Process action items using pre-existing routing decisions
         try:
-            routing_program = LLMTextCompletionProgram.from_defaults(
-                llm=self.llm,
-                output_cls=AgentRoutingDecision,
-                prompt=TOOL_DISPATCHER_PROMPT,
-                verbose=True,
-            )
-
             # Store total count for result collection
             await ctx.store.set(
                 "total_executions", len(event.action_items.action_items)
             )
 
-            # Process each action item: route and immediately dispatch execution
+            # Process each action item using its pre-determined routing
             for idx, action_item in enumerate(event.action_items.action_items):
                 try:
-                    logger.debug(f"Routing action item {idx}: {action_item.title}")
+                    # Use the routing decision already in the action item
+                    assigned_agent = action_item.assigned_agent or "UNASSIGNED_AGENT"
 
-                    # Get structured routing decision
-                    decision = await routing_program.acall(
-                        action_item=action_item.model_dump(),
-                        agents_list="\\n".join(agent_descriptions),
-                        action_item_index=idx,
+                    logger.debug(
+                        f"Dispatching action item {idx}: {action_item.title} "
+                        f"to {assigned_agent}"
                     )
 
-                    # Find the selected agent by name
-                    selected_agent = self._find_agent_by_name(
-                        available_agents, decision.agent_name
-                    )
-
+                    # Find the agent endpoint
                     agent_url = None
-                    if selected_agent:
-                        decision.agent_name = selected_agent.agent_id
-                        agent_url = selected_agent.endpoint
-                        logger.info(
-                            f"Routed '{action_item.title}' to {selected_agent.name}"
+                    if assigned_agent != "UNASSIGNED_AGENT":
+                        logger.debug(
+                            f"Looking for agent '{assigned_agent}' in registry. "
+                            f"Available agents: "
+                            f"{[a.agent_id for a in available_agents]}"
                         )
-                    else:
-                        logger.warning(
-                            f"Agent '{decision.agent_name}' not "
-                            "found, marking as unassigned"
+                        selected_agent = self._find_agent_by_id(
+                            available_agents, assigned_agent
                         )
-                        decision.agent_name = "UNASSIGNED_AGENT"
+                        if selected_agent:
+                            agent_url = selected_agent.endpoint
+                            logger.info(
+                                f"Dispatching '{action_item.title}' to "
+                                f"{selected_agent.name} at {agent_url}"
+                            )
+                        else:
+                            logger.warning(
+                                f"Agent '{assigned_agent}' not found in registry, "
+                                "marking as unassigned. "
+                                f"Available agents: "
+                                f"{[a.agent_id for a in available_agents]}"
+                            )
+                            # Update action item to reflect unavailable agent
+                            action_item.assigned_agent = "UNASSIGNED_AGENT"
+                            action_item.routing_reason = (
+                                f"Agent '{assigned_agent}' no longer available"
+                            )
 
-                    # Immediately dispatch execution for this action item
+                    # Dispatch execution for this action item
                     ctx.send_event(
                         ExecutionRequired(
-                            decision=decision,
-                            action_item_data=action_item,
+                            action_item_index=idx,
+                            action_item=action_item,
                             agent_url=agent_url,
                         )
                     )
@@ -181,34 +172,30 @@ class AgentDispatchWorkflow(Workflow):
                     logger.debug(f"Dispatched execution for action item {idx}")
 
                 except Exception as e:
-                    logger.error(f"Error routing action item {idx}: {e}")
-                    # Send unassigned execution for failed routing
-                    unassigned_decision = AgentRoutingDecision(
-                        action_item_index=idx,
-                        agent_name="UNASSIGNED_AGENT",
-                        routing_reason=f"Error during routing: {str(e)}",
-                        requires_human_approval=True,
-                    )
+                    logger.error(f"Error dispatching action item {idx}: {e}")
+                    # Update action item to mark dispatch failure
+                    action_item.assigned_agent = "UNASSIGNED_AGENT"
+                    action_item.routing_reason = f"Error during dispatch: {str(e)}"
+                    # Send execution for failed dispatch
                     ctx.send_event(
                         ExecutionRequired(
-                            decision=unassigned_decision,
-                            action_item_data=action_item,
+                            action_item_index=idx,
+                            action_item=action_item,
                             agent_url=None,
                         )
                     )
 
             logger.info(
-                "Completed routing and dispatch for "
-                f"{len(event.action_items.action_items)} action items"
+                f"Completed dispatch for {len(event.action_items.action_items)} "
+                "action items"
             )
 
-            # Return None since we've dispatched executions and don't
-            # need to return routing decisions
+            # Return None since we've dispatched executions
             return None
 
         except Exception as e:
-            logger.error(f"Error during routing process: {e}")
-            return StopWithErrorEvent(result="routing_error", error=True)
+            logger.error(f"Error during dispatch process: {e}")
+            return StopWithErrorEvent(result="dispatch_error", error=True)
 
     @with_retry(
         max_attempts=3,
@@ -308,17 +295,17 @@ class AgentDispatchWorkflow(Workflow):
     ) -> ExecutionCompleted:
         """Execute a single action item via the assigned agent."""
 
-        action_item = event.action_item_data
-        decision = event.decision
+        action_item = event.action_item
+        assigned_agent = action_item.assigned_agent or "UNASSIGNED_AGENT"
 
-        logger.info(f"Executing action item via {decision.agent_name}")
+        logger.info(f"Executing action item via {assigned_agent}")
 
-        if decision.agent_name == "UNASSIGNED_AGENT":
+        if assigned_agent == "UNASSIGNED_AGENT":
             return ExecutionCompleted(
                 result=AgentExecutionResult(
-                    action_item_index=decision.action_item_index,
+                    action_item_index=event.action_item_index,
                     action_item=action_item,
-                    agent_name=decision.agent_name,
+                    agent_name=assigned_agent,
                     request_error=True,
                     agent_error=True,
                     response=(
@@ -330,18 +317,23 @@ class AgentDispatchWorkflow(Workflow):
 
         try:
             # Use the provided agent URL
+            logger.debug(f"Agent URL for {assigned_agent}: {event.agent_url}")
             if not event.agent_url:
-                logger.error(f"No URL provided for agent: {decision.agent_name}")
+                logger.error(
+                    f"No URL provided for agent: {assigned_agent}. "
+                    f"Event data: action_item_index={event.action_item_index}, "
+                    f"agent_url={event.agent_url}"
+                )
                 return ExecutionCompleted(
                     result=AgentExecutionResult(
-                        action_item_index=decision.action_item_index,
+                        action_item_index=event.action_item_index,
                         action_item=action_item,
-                        agent_name=decision.agent_name,
+                        agent_name=assigned_agent,
                         request_error=True,
                         agent_error=True,
                         response=(
                             f"Agent URL not provided. No URL for agent "
-                            f"{decision.agent_name}"
+                            f"{assigned_agent}"
                         ),
                     )
                 )
@@ -361,7 +353,7 @@ class AgentDispatchWorkflow(Workflow):
 
             # Call agent with retry and circuit breaker protection
             response_data = await self._call_agent_with_resilience(
-                agent_url=agent_url, query=query, agent_name=decision.agent_name
+                agent_url=agent_url, query=query, agent_name=assigned_agent
             )
 
             logger.debug(f"response data: {response_data}")
@@ -375,9 +367,9 @@ class AgentDispatchWorkflow(Workflow):
 
             return ExecutionCompleted(
                 result=AgentExecutionResult(
-                    action_item_index=decision.action_item_index,
+                    action_item_index=event.action_item_index,
                     action_item=action_item,
-                    agent_name=decision.agent_name,
+                    agent_name=assigned_agent,
                     request_error=False,
                     agent_error=agent_error,
                     response=agent_response_content,
@@ -386,12 +378,12 @@ class AgentDispatchWorkflow(Workflow):
             )
 
         except (AgentTimeoutError, AgentUnavailableError, AgentResponseError) as e:
-            logger.error(f"Agent error for {decision.agent_name}: {e.message}")
+            logger.error(f"Agent error for {assigned_agent}: {e.message}")
             return ExecutionCompleted(
                 result=AgentExecutionResult(
-                    action_item_index=decision.action_item_index,
+                    action_item_index=event.action_item_index,
                     action_item=action_item,
-                    agent_name=decision.agent_name,
+                    agent_name=assigned_agent,
                     request_error=True,
                     agent_error=True,
                     response=f"Agent execution failed: {e.message}",
@@ -401,9 +393,9 @@ class AgentDispatchWorkflow(Workflow):
             logger.error(f"Unexpected error executing action item: {e}")
             return ExecutionCompleted(
                 result=AgentExecutionResult(
-                    action_item_index=decision.action_item_index,
+                    action_item_index=event.action_item_index,
                     action_item=action_item,
-                    agent_name=decision.agent_name,
+                    agent_name=assigned_agent,
                     request_error=True,
                     agent_error=True,
                     response=f"Unexpected execution error: {str(e)}",
@@ -439,18 +431,11 @@ class AgentDispatchWorkflow(Workflow):
 
         return StopWithErrorEvent(result=execution_results, error=False)
 
-    def _find_agent_by_name(self, agents, agent_name: str):
-        """Find agent by name from the available agents list."""
-        agent_name = agent_name.lower().strip()
-
-        # Try exact match by name first
+    def _find_agent_by_id(self, agents, agent_id: str):
+        """Find agent by ID from the available agents list."""
+        # Try exact match by agent_id first
         for agent in agents:
-            if agent.name.lower() == agent_name:
-                return agent
-
-        # Try partial match by name
-        for agent in agents:
-            if agent_name in agent.name.lower() or agent.name.lower() in agent_name:
+            if agent.agent_id == agent_id:
                 return agent
 
         return None
