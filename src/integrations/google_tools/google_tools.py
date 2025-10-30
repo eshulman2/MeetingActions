@@ -168,6 +168,7 @@ class GoogleToolSpec(BaseToolSpec):
         location: Optional[str] = None,
         description: Optional[str] = None,
         attendees: Optional[List[str]] = None,
+        recurrence: Optional[List[str]] = None,
     ) -> Dict:
         """
         Creates a new event in the user's primary Google Calendar.
@@ -180,6 +181,13 @@ class GoogleToolSpec(BaseToolSpec):
                 (e.g., "2025-08-28T09:00:00-07:00").
             end_time (str): The end time of the event in RFC3339 format
                 (e.g., "2025-08-28T09:00:00-07:00").
+            attendees (List[str], optional): A list of email addresses for attendees.
+            recurrence (List[str], optional): A list of RRULE strings for
+                recurring events following RFC 5545 specification. Examples:
+                - Daily for 10 occurrences: ["RRULE:FREQ=DAILY;COUNT=10"]
+                - Weekly on Monday and Wednesday: ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE"]
+                - Monthly on the last Friday: ["RRULE:FREQ=MONTHLY;BYDAY=-1FR"]
+                - Every weekday: ["RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"]
 
         Returns:
             dict: The created event object.
@@ -194,7 +202,7 @@ class GoogleToolSpec(BaseToolSpec):
             if attendees_list:
                 logger.debug(f"Adding {len(attendees_list)} attendees to event")
 
-            event = {
+            event: Dict = {
                 "summary": summary,
                 "location": location,
                 "description": description,
@@ -208,6 +216,10 @@ class GoogleToolSpec(BaseToolSpec):
                 },
                 "attendees": attendees_list,
             }
+
+            if recurrence:
+                event["recurrence"] = recurrence
+                logger.debug(f"Adding recurrence rules: {recurrence}")
 
             # pylint: disable=no-member
             created_event = (
