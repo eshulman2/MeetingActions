@@ -1,5 +1,5 @@
 .PHONY: help install dev build test lint format security clean docker-build docker-up docker-down git-setup
-.PHONY: start-mcp start-google-agents start-jira-agents start-workflows start-registry start-all stop-all
+.PHONY: start-google-mcp start-jira-mcp start-google-agents start-jira-agents start-workflows start-registry start-all stop-all
 
 # Default target
 help:
@@ -18,7 +18,8 @@ help:
 	@echo "  test-cov         - Run tests with coverage"
 	@echo ""
 	@echo "Services:"
-	@echo "  start-mcp        - Start MCP server"
+	@echo "  start-google-mcp - Start Google MCP server"
+	@echo "  start-jira-mcp   - Start JIRA MCP server"
 	@echo "  start-jira-agent - Start Jira agent server"
 	@echo "  start-google-agents - Start Google agent server"
 	@echo "  start-workflows  - Start workflow server"
@@ -36,10 +37,14 @@ help:
 	@echo "  health-check     - Check service health"
 	@echo "  verify-setup     - Verify development setup"
 
-# Start MCP server
-start-mcp:
-	@echo "Starting MCP server..."
+# Start MCP servers
+start-google-mcp:
+	@echo "Starting Google MCP server..."
 	UVICORN_PORT=8100 python -m src.mcp.google_tools_mcp
+
+start-jira-mcp:
+	@echo "Starting JIRA MCP server..."
+	UVICORN_PORT=8101 python -m src.mcp.jira_tools_mcp
 
 # Start agent servers
 start-google-agent:
@@ -65,8 +70,10 @@ start-all:
 	@echo "Starting all servers..."
 	@echo "Starting agent registry service..."
 	python -m src.services.registry_service &
-	@echo "Starting MCP server..."
+	@echo "Starting Google MCP server..."
 	python -m src.mcp.google_tools_mcp &
+	@echo "Starting JIRA MCP server..."
+	python -m src.mcp.jira_tools_mcp &
 	@echo "Starting Jira agent..."
 	UVICORN_PORT=8000 python -m src.core.agents.jira_agent &
 	@echo "Starting Google agent..."
@@ -83,6 +90,7 @@ stop-all:
 	pkill -f "python -m src.core.agents.google_agent" || true
 	pkill -f "python -m src.core.workflow_servers.action_items_server" || true
 	pkill -f "python -m src.mcp.google_tools_mcp" || true
+	pkill -f "python -m src.mcp.jira_tools_mcp" || true
 	@echo "All servers stopped!"
 
 # Installation and Setup
@@ -153,6 +161,9 @@ health-check:
 	@curl -f http://localhost:8000/health 2>/dev/null && echo "✅ Jira Agent: Healthy" || echo "❌ Jira Agent: Down"
 	@curl -f http://localhost:8001/health 2>/dev/null && echo "✅ Google Agent: Healthy" || echo "❌ Google Agent: Down"
 	@curl -f http://localhost:8002/health 2>/dev/null && echo "✅ Workflows: Healthy" || echo "❌ Workflows: Down"
+	@curl -f http://localhost:8003/health 2>/dev/null && echo "✅ Registry: Healthy" || echo "❌ Registry: Down"
+	@curl -f http://localhost:8100/health 2>/dev/null && echo "✅ Google MCP: Healthy" || echo "❌ Google MCP: Down"
+	@curl -f http://localhost:8101/health 2>/dev/null && echo "✅ JIRA MCP: Healthy" || echo "❌ JIRA MCP: Down"
 
 verify-setup:
 	@echo "Verifying development setup..."

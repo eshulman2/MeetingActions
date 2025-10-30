@@ -1,14 +1,14 @@
 {
     "llm": "Gemini",
     "model": "gemini-2.0-flash",
-    "tools_config": {
-        "jira_tool": {
-            "server": "https://issues.redhat.com"
-        }
-    },
     "agent_config": {
         "max_iterations": 20,
         "verbose": true
+    },
+    "mcp_config": {
+        "servers": [
+            "http://127.0.0.1:8101/mcp"
+        ]
     },
     "observability": {
         "enable": true,

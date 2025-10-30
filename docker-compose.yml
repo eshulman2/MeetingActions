@@ -105,6 +105,24 @@ services:
       - ./service_account.json:/app/service_account.json:ro,Z
     restart: unless-stopped
 
+  jira-mcp:
+    image: jira-tools-mcp
+    user: "1000:1000"
+    build:
+      context: .
+      dockerfile: containers/Dockerfile.jira-mcp
+    ports:
+      - "8101:8101"
+    environment:
+      - PYTHONPATH=/app
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN}
+      - CONFIG_PATH=/app/config.json
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./configs/jira-mcp-config.json:/app/config.json:ro,z
+      - ./logs:/app/logs:rw,z
+    restart: unless-stopped
+
 networks:
   default:
     driver: bridge
