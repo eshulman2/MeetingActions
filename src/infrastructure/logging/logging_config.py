@@ -75,6 +75,21 @@ def get_logging_config() -> Dict[str, Any]:
                 "handlers": ["console", "file"],
                 "propagate": False,
             },
+            "httpx": {
+                "level": "WARNING",
+                "handlers": ["console", "file"],
+                "propagate": False,
+            },
+            "fastmcp": {
+                "level": "INFO",
+                "handlers": ["console", "file"],
+                "propagate": False,
+            },
+            "redis": {
+                "level": "WARNING",
+                "handlers": ["console", "file"],
+                "propagate": False,
+            },
         },
         "root": {
             "level": log_level,
