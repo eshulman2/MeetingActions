@@ -35,7 +35,9 @@ def google_tool_spec(mock_cache, mock_services):
 
     with patch("src.integrations.google_tools.google_tools.build") as mock_build, patch(
         "src.integrations.google_tools.google_tools.authenticate"
-    ), patch("src.integrations.google_tools.google_tools.get_cache") as mock_get_cache:
+    ), patch(
+        "src.integrations.google_tools.google_tools.get_document_cache"
+    ) as mock_get_cache:
 
         mock_build.side_effect = [calendar_service, meet_service, docs_service]
         mock_get_cache.return_value = mock_cache

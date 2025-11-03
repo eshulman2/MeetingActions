@@ -4,7 +4,14 @@ import json
 import os
 from typing import Any, Dict
 
-from pydantic import BaseModel, Field, HttpUrl, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    ValidationError,
+    model_validator,
+)
 
 from src.common.singleton_meta import SingletonMeta
 
@@ -59,6 +66,8 @@ class CacheConfigSchema(BaseModel):
 class ConfigSchema(BaseModel):
     """Config Schema for validation"""
 
+    model_config = ConfigDict(extra="forbid")
+
     llm: str = "Gemini"
     model: str = "gemini-2.0-flash"
     host: str = Field(
@@ -96,6 +105,12 @@ class ConfigSchema(BaseModel):
     registry_endpoint: HttpUrl = Field(
         default_factory=lambda: HttpUrl("http://localhost:8003"),
         description="Agent registry service endpoint",
+    )
+    agents: Dict[str, str] = Field(
+        default_factory=dict, description="Dictionary of agent names to endpoints"
+    )
+    meeting_notes_endpoint: str | None = Field(
+        default=None, description="Meeting notes service endpoint"
     )
 
 
