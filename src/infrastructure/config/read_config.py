@@ -106,6 +106,13 @@ class ConfigSchema(BaseModel):
         default_factory=lambda: HttpUrl("http://localhost:8003"),
         description="Agent registry service endpoint",
     )
+    agent_endpoint: str | None = Field(
+        default=None,
+        description=(
+            "Override endpoint for agent to advertise to "
+            "registry (for containerized deployments)"
+        ),
+    )
     agents: Dict[str, str] = Field(
         default_factory=dict, description="Dictionary of agent names to endpoints"
     )

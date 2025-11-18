@@ -11,6 +11,12 @@ services:
     volumes:
       - redis-data:/data
     command: '--requirepass 12345'
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
 
   jira-agent:
@@ -29,6 +35,19 @@ services:
     volumes:
       - ./configs/jira-agent-config.json:/app/config.json:ro,z
       - ./logs:/app/logs:rw,z
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      jira-mcp:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
   google-agent:
@@ -47,6 +66,19 @@ services:
     volumes:
       - ./configs/google-agent-config.json:/app/config.json:ro,z
       - ./logs:/app/logs:rw,z
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      google-mcp:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
   action-items-workflows:
@@ -65,6 +97,14 @@ services:
     volumes:
       - ./configs/action-items-config.json:/app/config.json:ro,z
       - ./logs:/app/logs:rw,z
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
   registry-service:
@@ -82,8 +122,17 @@ services:
     volumes:
       - ./configs/registry-service-config.json:/app/config.json:ro,z
       - ./logs:/app/logs:rw,z
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
   google-mcp:
@@ -99,10 +148,21 @@ services:
       - MODEL_API_KEY=${MODEL_API_KEY}
       - CONFIG_PATH=/app/config.json
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - RUNNING_IN_CONTAINER=true
     volumes:
       - ./configs/google-mcp-config.json:/app/config.json:ro,z
       - ./logs:/app/logs:rw,z
-      - ./service_account.json:/app/service_account.json:ro,Z
+      - ./credentials.json:/app/credentials.json:ro,z
+      - ./token.json:/app/token.json:rw,z
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8100/health\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
   jira-mcp:
@@ -121,6 +181,12 @@ services:
     volumes:
       - ./configs/jira-mcp-config.json:/app/config.json:ro,z
       - ./logs:/app/logs:rw,z
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8101/health\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
 networks:

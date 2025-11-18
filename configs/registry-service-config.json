@@ -1,7 +1,6 @@
 {
     "llm": "Gemini",
     "model": "gemini-2.0-flash",
-    "port": 8100,
     "max_document_length": 20000000000,
     "additional_model_parameter": {
         "is_chat_model": true
@@ -10,7 +9,7 @@
         "enable": true,
         "secret_key": "sk-lf-cd7a379b-8fb6-47a5-b8ab-91ae02fb1f7a",
         "public_key": "pk-lf-82907698-aa41-41fb-b9a3-e9e37c06a41a",
-        "host": "http://localhost:3000"
+        "host": "http://host.docker.internal:3000"
     },
     "cache_config": {
         "enable": true,
