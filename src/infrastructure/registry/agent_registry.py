@@ -244,12 +244,3 @@ class AgentRegistry(metaclass=SingletonMeta):
         except Exception as e:
             logger.error(f"Error getting registry stats: {e}")
             return {"error": str(e)}
-
-
-def get_registry() -> AgentRegistry:
-    """Get the singleton agent registry instance
-
-    Returns:
-        AgentRegistry: The singleton registry instance
-    """
-    return AgentRegistry()
