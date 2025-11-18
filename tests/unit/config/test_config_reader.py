@@ -106,13 +106,11 @@ class TestConfigReader:
 
     def test_reset_instance(self, temp_config_file):
         """Test resetting singleton instance."""
-        from src.common.singleton_meta import SingletonMeta
-
         # Create first instance
         reader1 = ConfigReader()
 
         # Reset singleton
-        SingletonMeta.reset_instance(ConfigReader)
+        ConfigReader.reset_instance()
 
         # Create new instance
         reader2 = ConfigReader()
