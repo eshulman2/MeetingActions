@@ -10,6 +10,7 @@ import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 
+from src.common.singleton_meta import SingletonMeta
 from src.infrastructure.cache import RedisDocumentCache
 from src.infrastructure.config.read_config import ConfigReader, ConfigSchema
 
@@ -76,21 +77,15 @@ def temp_config_file():
 @pytest.fixture
 def reset_singletons():
     """Reset singleton instances before each test."""
-    # Reset ConfigReader singleton
-    if ConfigReader in ConfigReader.__class__._instances:
-        del ConfigReader.__class__._instances[ConfigReader]
-
-    # Reset RedisDocumentCache singleton
-    if RedisDocumentCache in RedisDocumentCache.__class__._instances:
-        del RedisDocumentCache.__class__._instances[RedisDocumentCache]
+    # Reset singletons using SingletonMeta
+    SingletonMeta.reset_instance(ConfigReader)
+    SingletonMeta.reset_instance(RedisDocumentCache)
 
     yield
 
     # Reset again after test
-    if ConfigReader in ConfigReader.__class__._instances:
-        del ConfigReader.__class__._instances[ConfigReader]
-    if RedisDocumentCache in RedisDocumentCache.__class__._instances:
-        del RedisDocumentCache.__class__._instances[RedisDocumentCache]
+    SingletonMeta.reset_instance(ConfigReader)
+    SingletonMeta.reset_instance(RedisDocumentCache)
 
 
 @pytest.fixture

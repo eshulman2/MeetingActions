@@ -146,13 +146,6 @@ class ConfigReader(metaclass=SingletonMeta):
             except ValidationError as err:
                 raise err
 
-    @classmethod
-    def reset_instance(cls):
-        """Reset singleton instance for testing."""
-        # pylint: disable=protected-access
-        if cls in cls._instances:
-            del cls._instances[cls]
-
 
 def get_config() -> ConfigReader:
     """Get the global configuration instance."""
