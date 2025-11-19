@@ -256,14 +256,8 @@ class TestGoogleToolSpec:
         assert result == "Cached content"
         google_tool_spec.docs_service.documents().get.assert_not_called()
 
-    @patch("src.integrations.google_tools.google_tools.get_config")
-    def test_fetch_google_doc_content_from_api(self, mock_get_config, google_tool_spec):
+    def test_fetch_google_doc_content_from_api(self, google_tool_spec):
         """Test retrieving document content from API."""
-        # Mock config
-        mock_config = MagicMock()
-        mock_config.config.max_document_length = 10000
-        mock_get_config.return_value = mock_config
-
         google_tool_spec.cache.get_document_content.return_value = None
 
         mock_document = {
@@ -289,48 +283,6 @@ class TestGoogleToolSpec:
         google_tool_spec.cache.set_document_content.assert_called_once_with(
             "doc123", "Test content", "Test Document"
         )
-
-    @patch("src.integrations.google_tools.google_tools.get_config")
-    def test_fetch_google_doc_content_exceeds_length(
-        self, mock_get_config, google_tool_spec
-    ):
-        """Test handling when document content exceeds maximum length."""
-        # Mock config with small max length
-        mock_config = MagicMock()
-        mock_config.config.max_document_length = 5
-        mock_get_config.return_value = mock_config
-
-        google_tool_spec.cache.get_document_content.return_value = None
-
-        mock_document = {
-            "title": "Test Document",
-            "body": {
-                "content": [
-                    {
-                        "paragraph": {
-                            "elements": [
-                                {
-                                    "textRun": {
-                                        "content": (
-                                            "This is a very long content "
-                                            "that exceeds the limit"
-                                        )
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                ]
-            },
-        }
-
-        google_tool_spec.docs_service.documents().get().execute.return_value = (
-            mock_document
-        )
-
-        result = google_tool_spec.fetch_google_doc_content("doc123")
-
-        assert "exceeds maximum length" in result
 
     def test_read_paragraph_element_with_text_run(self, google_tool_spec):
         """Test reading paragraph element with text run."""

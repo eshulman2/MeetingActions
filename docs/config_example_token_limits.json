@@ -1,0 +1,39 @@
+{
+  "_comment": "Example configuration with token limit settings",
+  "llm": "Gemini",
+  "model": "gemini-2.0-flash",
+  "verify_ssl": true,
+
+  "meeting_notes_token_threshold": 10000,
+  "max_context_tokens": 40000,
+
+  "observability": {
+    "enable": false
+  },
+
+  "cache_config": {
+    "enable": false
+  },
+
+  "google_mcp": "http://localhost:8100/mcp",
+  "registry_endpoint": "http://localhost:8003",
+
+  "_token_configuration_notes": {
+    "meeting_notes_token_threshold": "Triggers summarization when meeting notes exceed this token count (default: 10000)",
+    "max_context_tokens": "Maximum tokens for LLM context window (default: 40000)",
+    "recommended_values": {
+      "short_meetings": {
+        "meeting_notes_token_threshold": 5000,
+        "max_context_tokens": 20000
+      },
+      "normal_meetings": {
+        "meeting_notes_token_threshold": 10000,
+        "max_context_tokens": 40000
+      },
+      "long_meetings": {
+        "meeting_notes_token_threshold": 15000,
+        "max_context_tokens": 60000
+      }
+    }
+  }
+}

@@ -90,7 +90,6 @@ class ConfigSchema(BaseModel):
         description="Model api key",
     )
     verify_ssl: bool = True
-    max_document_length: int = 2000
     additional_model_parameter: Dict[str, Any] = {}
     tools_config: Dict[str, Any] = {}
     agent_config: Dict[str, Any] = {}

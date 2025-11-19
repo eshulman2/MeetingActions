@@ -31,7 +31,6 @@ def temp_config_file():
         "model": "gpt-3.5-turbo",
         "model_api_key": "test_key",
         "verify_ssl": True,
-        "max_document_length": 1000,
         "additional_model_parameter": {},
         "tools_config": {"jira_tool": {"server": "https://test-jira.atlassian.net"}},
         "agent_config": {"max_iterations": 10, "verbose": True},

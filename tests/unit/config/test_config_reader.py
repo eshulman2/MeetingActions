@@ -27,7 +27,6 @@ class TestConfigSchema:
         assert config.llm == "Gemini"
         assert config.model == "gemini-2.0-flash"
         assert config.verify_ssl is True
-        assert config.max_document_length == 2000
 
     def test_observability_config_validation(self):
         """Test observability configuration validation."""

@@ -62,25 +62,20 @@ class TestGoogleToolsPerformance:
         )
         mock_google_tool_spec.cache.get_document_content.return_value = None
 
-        with patch(
-            "src.integrations.google_tools.google_tools.get_config"
-        ) as mock_config:
-            mock_config.return_value.config.max_document_length = 100000
+        # Measure performance
+        start_time = time.time()
+        result = mock_google_tool_spec.fetch_google_doc_content("test_doc_id")
+        end_time = time.time()
 
-            # Measure performance
-            start_time = time.time()
-            result = mock_google_tool_spec.fetch_google_doc_content("test_doc_id")
-            end_time = time.time()
+        # Assertions
+        assert result is not None
+        assert len(result) > 0
 
-            # Assertions
-            assert result is not None
-            assert len(result) > 0
-
-            # Performance assertion - should complete within reasonable time
-            execution_time = end_time - start_time
-            assert (
-                execution_time < 1.0
-            ), f"Document fetch took {execution_time:.3f}s, expected < 1.0s"
+        # Performance assertion - should complete within reasonable time
+        execution_time = end_time - start_time
+        assert (
+            execution_time < 1.0
+        ), f"Document fetch took {execution_time:.3f}s, expected < 1.0s"
 
     @pytest.mark.slow
     def test_concurrent_document_fetches(self, mock_google_tool_spec):
@@ -106,30 +101,25 @@ class TestGoogleToolsPerformance:
         )
         mock_google_tool_spec.cache.get_document_content.return_value = None
 
-        with patch(
-            "src.integrations.google_tools.google_tools.get_config"
-        ) as mock_config:
-            mock_config.return_value.config.max_document_length = 100000
+        def fetch_document(doc_id):
+            return mock_google_tool_spec.fetch_google_doc_content(f"doc_{doc_id}")
 
-            def fetch_document(doc_id):
-                return mock_google_tool_spec.fetch_google_doc_content(f"doc_{doc_id}")
+        # Test concurrent execution
+        start_time = time.time()
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(fetch_document, i) for i in range(10)]
+            results = [future.result() for future in futures]
+        end_time = time.time()
 
-            # Test concurrent execution
-            start_time = time.time()
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                futures = [executor.submit(fetch_document, i) for i in range(10)]
-                results = [future.result() for future in futures]
-            end_time = time.time()
+        # Assertions
+        assert len(results) == 10
+        assert all(result is not None for result in results)
 
-            # Assertions
-            assert len(results) == 10
-            assert all(result is not None for result in results)
-
-            # Performance assertion
-            execution_time = end_time - start_time
-            assert (
-                execution_time < 5.0
-            ), f"Concurrent fetches took {execution_time:.3f}s, expected < 5.0s"
+        # Performance assertion
+        execution_time = end_time - start_time
+        assert (
+            execution_time < 5.0
+        ), f"Concurrent fetches took {execution_time:.3f}s, expected < 5.0s"
 
     def test_cache_performance_impact(self, mock_google_tool_spec):
         """Test performance impact of caching."""
@@ -162,14 +152,9 @@ class TestGoogleToolsPerformance:
             mock_document
         )
 
-        with patch(
-            "src.integrations.google_tools.google_tools.get_config"
-        ) as mock_config:
-            mock_config.return_value.config.max_document_length = 100000
-
-            start_time = time.time()
-            result = mock_google_tool_spec.fetch_google_doc_content("api_doc")
-            api_time = time.time() - start_time
+        start_time = time.time()
+        result = mock_google_tool_spec.fetch_google_doc_content("api_doc")
+        api_time = time.time() - start_time
 
         assert result == "API content"
 
