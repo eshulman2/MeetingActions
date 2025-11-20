@@ -4,21 +4,18 @@
     "additional_model_parameter": {
         "is_chat_model": true
     },
-    "agent_config": {
-        "max_iterations": 20,
-        "verbose": true
-    },
-    "mcp_config": {
-        "servers": [
-            "http://jira-mcp:8101/mcp"
-        ]
-    },
-    "registry_endpoint": "http://registry-service:8000",
-    "agent_endpoint": "http://jira-agent:8000",
     "observability": {
         "enable": true,
         "secret_key": "sk-lf-cd7a379b-8fb6-47a5-b8ab-91ae02fb1f7a",
         "public_key": "pk-lf-82907698-aa41-41fb-b9a3-e9e37c06a41a",
         "host": "http://host.docker.internal:3000"
+    },
+    "cache_config": {
+        "enable": true,
+        "ttl_hours": 1,
+        "max_size_mb": 100,
+        "host": "redis",
+        "port": 6379,
+        "password": "12345"
     }
 }

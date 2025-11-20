@@ -3,6 +3,8 @@
 import os
 
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
@@ -36,6 +38,14 @@ except Exception as e:
 
 # Create MCP server
 mcp_server = FastMCP("JIRA tools mcp server")
+
+
+# Health check endpoint using FastMCP custom_route
+@mcp_server.custom_route("/health", methods=["GET"])
+async def health_check(_request: Request) -> PlainTextResponse:
+    """Health check endpoint for container monitoring"""
+    return PlainTextResponse("OK")
+
 
 # Register all tools with the MCP server
 for tool in tools:

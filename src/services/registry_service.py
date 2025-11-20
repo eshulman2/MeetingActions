@@ -14,17 +14,23 @@ from pydantic import BaseModel
 
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
-from src.infrastructure.registry.agent_registry import AgentInfo, get_registry
+from src.infrastructure.registry.agent_registry import AgentInfo, AgentRegistry
 
 logger = get_logger("registry_service")
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(application: FastAPI):
     """Manage application lifespan"""
     # Startup
     logger.info("Starting Agent Registry Service")
-    cleanup_task = asyncio.create_task(cleanup_stale_agents())
+
+    # Initialize registry during startup (not at module import)
+    logger.info("Initializing agent registry...")
+    application.state.registry = AgentRegistry()
+    logger.info("Agent registry initialized")
+
+    cleanup_task = asyncio.create_task(cleanup_stale_agents(application))
     logger.info("Registry service started successfully")
 
     try:
@@ -46,8 +52,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
-
-registry = get_registry()
 
 
 class RegistrationResponse(BaseModel):
@@ -76,6 +80,7 @@ class HeartbeatResponse(BaseModel):
 @app.post("/register", response_model=RegistrationResponse)
 async def register_agent(agent_info: AgentInfo):
     """Register a new agent with the registry"""
+    registry = app.state.registry
     try:
         success = registry.register_agent(agent_info)
         if success:
@@ -97,6 +102,7 @@ async def register_agent(agent_info: AgentInfo):
 @app.get("/discover", response_model=DiscoveryResponse)
 async def discover_agents():
     """Discover all active agents"""
+    registry = app.state.registry
     try:
         agents = registry.discover_agents()
 
@@ -128,6 +134,7 @@ async def discover_agents():
 @app.post("/heartbeat/{agent_id}", response_model=HeartbeatResponse)
 async def agent_heartbeat(agent_id: str):
     """Receive heartbeat from an agent"""
+    registry = app.state.registry
     try:
         success = registry.heartbeat(agent_id)
         if success:
@@ -149,6 +156,7 @@ async def agent_heartbeat(agent_id: str):
 @app.get("/agents/{agent_id}")
 async def get_agent_info(agent_id: str) -> Dict[str, Any]:
     """Get detailed information about a specific agent"""
+    registry = app.state.registry
     try:
         agent = registry.get_agent(agent_id)
         if agent:
@@ -175,6 +183,7 @@ async def get_agent_info(agent_id: str) -> Dict[str, Any]:
 @app.delete("/agents/{agent_id}")
 async def unregister_agent(agent_id: str) -> Dict[str, str]:
     """Unregister an agent from the registry"""
+    registry = app.state.registry
     try:
         success = registry.unregister_agent(agent_id)
         if success:
@@ -192,6 +201,7 @@ async def unregister_agent(agent_id: str) -> Dict[str, str]:
 @app.get("/stats")
 async def get_registry_stats() -> Dict[str, Any]:
     """Get registry statistics and health information"""
+    registry = app.state.registry
     try:
         stats = registry.get_registry_stats()
         return {
@@ -212,6 +222,7 @@ async def get_registry_stats() -> Dict[str, Any]:
 @app.get("/health")
 async def health_check() -> Dict[str, Any]:
     """Health check endpoint"""
+    registry = app.state.registry
     return {
         "status": "healthy",
         "service": app.title,
@@ -240,12 +251,14 @@ async def root() -> Dict[str, Any]:
 
 
 # Background task for cleanup
-async def cleanup_stale_agents() -> None:
+async def cleanup_stale_agents(application: FastAPI) -> None:
     """Background task to clean up stale agents"""
     while True:
         try:
             # Cleanup agents older than 15 minutes (1.5x the TTL for safety margin)
-            stale_count = registry.cleanup_stale_agents(max_age_minutes=15)
+            stale_count = application.state.registry.cleanup_stale_agents(
+                max_age_minutes=15
+            )
             if stale_count > 0:
                 logger.info(f"Cleaned up {stale_count} stale agents")
         except Exception as e:

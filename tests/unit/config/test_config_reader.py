@@ -27,7 +27,6 @@ class TestConfigSchema:
         assert config.llm == "Gemini"
         assert config.model == "gemini-2.0-flash"
         assert config.verify_ssl is True
-        assert config.max_document_length == 2000
 
     def test_observability_config_validation(self):
         """Test observability configuration validation."""
@@ -106,11 +105,13 @@ class TestConfigReader:
 
     def test_reset_instance(self, temp_config_file):
         """Test resetting singleton instance."""
+        from src.common.singleton_meta import SingletonMeta
+
         # Create first instance
         reader1 = ConfigReader()
 
         # Reset singleton
-        ConfigReader.reset_instance()
+        SingletonMeta.reset_instance(ConfigReader)
 
         # Create new instance
         reader2 = ConfigReader()
@@ -120,30 +121,51 @@ class TestConfigReader:
 
     def test_file_not_found_error(self):
         """Test error when config file doesn't exist."""
+        from src.common.singleton_meta import SingletonMeta
+
+        # Reset singleton before test
+        SingletonMeta.reset_instance(ConfigReader)
+
         with patch.dict(os.environ, {"CONFIG_PATH": "/nonexistent/config.json"}):
-            with patch.object(ConfigReader, "_instances", {}):
-                with pytest.raises(FileNotFoundError, match="Config file not found"):
-                    ConfigReader()
+            with pytest.raises(FileNotFoundError, match="Config file not found"):
+                ConfigReader()
+
+        # Cleanup
+        SingletonMeta.reset_instance(ConfigReader)
 
     def test_json_decode_error(self, tmp_path):
         """Test error when config file has invalid JSON."""
+        from src.common.singleton_meta import SingletonMeta
+
+        # Reset singleton before test
+        SingletonMeta.reset_instance(ConfigReader)
+
         invalid_config = tmp_path / "invalid.json"
         invalid_config.write_text("{ invalid json }")
 
         with patch.dict(os.environ, {"CONFIG_PATH": str(invalid_config)}):
-            with patch.object(ConfigReader, "_instances", {}):
-                with pytest.raises(Exception):  # JSON decode error
-                    ConfigReader()
+            with pytest.raises(Exception):  # JSON decode error
+                ConfigReader()
+
+        # Cleanup
+        SingletonMeta.reset_instance(ConfigReader)
 
     def test_validation_error(self, tmp_path):
         """Test error when config file has invalid schema."""
+        from src.common.singleton_meta import SingletonMeta
+
+        # Reset singleton before test
+        SingletonMeta.reset_instance(ConfigReader)
+
         invalid_config = tmp_path / "invalid_schema.json"
         invalid_config.write_text('{"invalid_field": "value"}')
 
         with patch.dict(os.environ, {"CONFIG_PATH": str(invalid_config)}):
-            with patch.object(ConfigReader, "_instances", {}):
-                with pytest.raises(ValidationError):
-                    ConfigReader()
+            with pytest.raises(ValidationError):
+                ConfigReader()
+
+        # Cleanup
+        SingletonMeta.reset_instance(ConfigReader)
 
 
 @pytest.mark.unit

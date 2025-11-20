@@ -1,6 +1,9 @@
 {
-    "mcp_config": {
-        "port": 8101
+    "llm": "Gemini",
+    "model": "gemini-2.0-flash",
+    "port": 8101,
+    "additional_model_parameter": {
+        "is_chat_model": true
     },
     "tools_config": {
         "jira_tool": {
@@ -9,16 +12,16 @@
     },
     "observability": {
         "enable": true,
-        "secret_key": "sk-lf-ede91f7c-281c-4fa9-ae83-19e04637e970",
-        "public_key": "pk-lf-0db6913f-2ebb-4286-816e-023986374857",
+        "secret_key": "sk-lf-cd7a379b-8fb6-47a5-b8ab-91ae02fb1f7a",
+        "public_key": "pk-lf-82907698-aa41-41fb-b9a3-e9e37c06a41a",
         "host": "http://localhost:3000"
     },
     "cache_config": {
-        "enabled": true,
+        "enable": true,
         "ttl_hours": 1,
         "max_size_mb": 100,
-        "host": "localhost",
-        "port": 6380,
+        "host": "redis",
+        "port": 6379,
         "password": "12345"
     }
 }

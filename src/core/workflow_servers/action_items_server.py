@@ -106,9 +106,9 @@ class ActionItemsServer(BaseWorkflowServer):
                     # Initialize generation workflow
                     generation_workflow = MeetingNotesAndGenerationOrchestrator(
                         llm=self.llm,
-                        timeout=300,
+                        timeout=600,
                         verbose=True,
-                        max_iterations=20,
+                        max_iterations=5,
                     )
 
                     res = await generation_workflow.run(

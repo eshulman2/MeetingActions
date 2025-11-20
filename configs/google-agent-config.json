@@ -1,19 +1,24 @@
 {
     "llm": "Gemini",
     "model": "gemini-2.0-flash",
+    "additional_model_parameter": {
+        "is_chat_model": true
+    },
     "agent_config": {
         "max_iterations": 20,
         "verbose": true
     },
     "mcp_config": {
         "servers": [
-            "http://127.0.0.1:8100/mcp"
+            "http://google-mcp:8100/mcp"
         ]
     },
+    "registry_endpoint": "http://registry-service:8000",
+    "agent_endpoint": "http://google-agent:8000",
     "observability": {
         "enable": true,
-        "secret_key": "sk-lf-ede91f7c-281c-4fa9-ae83-19e04637e970",
-        "public_key": "pk-lf-0db6913f-2ebb-4286-816e-023986374857",
-        "host": "http://localhost:3000"
+        "secret_key": "sk-lf-cd7a379b-8fb6-47a5-b8ab-91ae02fb1f7a",
+        "public_key": "pk-lf-82907698-aa41-41fb-b9a3-e9e37c06a41a",
+        "host": "http://host.docker.internal:3000"
     }
 }

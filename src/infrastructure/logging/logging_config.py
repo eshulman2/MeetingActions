@@ -101,10 +101,41 @@ def get_logging_config() -> Dict[str, Any]:
 def setup_logging() -> logging.Logger:
     """Set up logging configuration and return the main logger."""
     config = get_logging_config()
-    logging.config.dictConfig(config)
 
-    logger = logging.getLogger("agents")
-    logger.info("Logging initialized successfully")
+    try:
+        logging.config.dictConfig(config)
+        logger = logging.getLogger("agents")
+        logger.info("Logging initialized successfully")
+    except (OSError, ValueError) as e:
+        # If file handlers fail, fall back to console-only logging
+        console_only_config = {
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "standard": {
+                    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                    "datefmt": "%Y-%m-%d %H:%M:%S",
+                },
+            },
+            "handlers": {
+                "console": {
+                    "class": "logging.StreamHandler",
+                    "level": get_log_level(),
+                    "formatter": "standard",
+                    "stream": "ext://sys.stdout",
+                },
+            },
+            "root": {
+                "level": get_log_level(),
+                "handlers": ["console"],
+            },
+        }
+        logging.config.dictConfig(console_only_config)
+        logger = logging.getLogger("agents")
+        logger.warning(
+            f"Failed to configure file logging handlers ({e}), "
+            "falling back to console-only logging"
+        )
 
     return logger
 

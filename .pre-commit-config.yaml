@@ -32,3 +32,9 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-requests, types-redis, types-tzlocal]
+
+  - repo: https://github.com/pycqa/pylint
+    rev: v3.3.2
+    hooks:
+      - id: pylint
+        args: ["--rcfile=.pylintrc", "--disable=import-error,no-name-in-module"]

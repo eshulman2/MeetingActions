@@ -90,7 +90,6 @@ class ConfigSchema(BaseModel):
         description="Model api key",
     )
     verify_ssl: bool = True
-    max_document_length: int = 2000
     additional_model_parameter: Dict[str, Any] = {}
     tools_config: Dict[str, Any] = {}
     agent_config: Dict[str, Any] = {}
@@ -105,6 +104,13 @@ class ConfigSchema(BaseModel):
     registry_endpoint: HttpUrl = Field(
         default_factory=lambda: HttpUrl("http://localhost:8003"),
         description="Agent registry service endpoint",
+    )
+    agent_endpoint: str | None = Field(
+        default=None,
+        description=(
+            "Override endpoint for agent to advertise to "
+            "registry (for containerized deployments)"
+        ),
     )
     agents: Dict[str, str] = Field(
         default_factory=dict, description="Dictionary of agent names to endpoints"
@@ -145,13 +151,6 @@ class ConfigReader(metaclass=SingletonMeta):
                 self.config = ConfigSchema(**config_data)
             except ValidationError as err:
                 raise err
-
-    @classmethod
-    def reset_instance(cls):
-        """Reset singleton instance for testing."""
-        # pylint: disable=protected-access
-        if cls in cls._instances:
-            del cls._instances[cls]
 
 
 def get_config() -> ConfigReader:

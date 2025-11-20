@@ -18,14 +18,22 @@ from llama_index.core.workflow import (
 
 from src.core.schemas.workflow_models import ActionItemsList, ReviewFeedback
 from src.core.workflows.common_events import StopWithErrorEvent
+from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.prompts.prompts import (
     ACTION_ITEMS_PROMPT,
     REFINEMENT_PROMPT,
     REVIEWER_PROMPT,
 )
+from src.infrastructure.utils.token_utils import (
+    count_tokens,
+    get_max_context_tokens,
+    should_summarize_notes,
+    summarize_meeting_notes,
+)
 
 logger = get_logger("workflows.action_items_generation")
+config = get_config()
 
 
 class ReviewRequired(Event):
@@ -50,22 +58,32 @@ class ActionItemsGenerationWorkflow(Workflow):
     structured, validated output without manual JSON parsing.
     """
 
-    def __init__(self, llm, *args, max_iterations: int = 20, **kwargs):
+    def __init__(self, llm, *args, max_iterations: int = 5, **kwargs):
         """Initialize the workflow.
 
         Args:
             llm: Language model for generating action items
-            max_iterations: Maximum number of refinement iterations
+            max_iterations: Maximum number of refinement iterations (default: 5)
         """
         super().__init__(*args, **kwargs)
         self.llm = llm
         self.max_iterations = max_iterations
+
+        # Dynamically get max context tokens from LLM metadata
+        self.max_context_tokens = get_max_context_tokens(llm)
+
+        # Set token threshold for summarization (25% of max context)
+        self.token_threshold = int(self.max_context_tokens * 0.25)
+
         self.memory = Memory.from_defaults(
-            session_id="action_items_generation", token_limit=40000
+            session_id="action_items_generation",
+            token_limit=self.max_context_tokens,
         )
         logger.info(
             f"Initialized ActionItemsGenerationWorkflow with "
-            f"max_iterations: {max_iterations}"
+            f"max_iterations: {max_iterations}, "
+            f"max_context_tokens: {self.max_context_tokens}, "
+            f"token_threshold: {self.token_threshold}"
         )
 
     @step
@@ -75,10 +93,40 @@ class ActionItemsGenerationWorkflow(Workflow):
         """Generate initial action items from meeting notes.
 
         Uses LLMTextCompletionProgram to ensure structured output via Pydantic models.
+        Automatically summarizes long meeting notes to prevent token limit issues.
         """
         logger.info("Generating action items from meeting notes")
 
         try:
+            # Check if meeting notes need summarization
+            meeting_notes = event.meeting_notes
+            token_count = count_tokens(meeting_notes, self.llm)
+            logger.info(f"Meeting notes token count: {token_count}")
+
+            # Store original notes for potential use in review
+            await ctx.store.set("original_meeting_notes", meeting_notes)
+
+            # Summarize if notes are too long
+            if should_summarize_notes(
+                meeting_notes, self.llm, token_threshold=self.token_threshold
+            ):
+                logger.warning(
+                    "Meeting notes exceed token threshold, summarizing to "
+                    "prevent token limit issues"
+                )
+                meeting_notes = await summarize_meeting_notes(
+                    meeting_notes, llm=self.llm, target_length_ratio=0.4
+                )
+                summarized_token_count = count_tokens(meeting_notes, self.llm)
+                logger.info(
+                    f"Summarized notes: {token_count} -> "
+                    f"{summarized_token_count} tokens "
+                    f"({summarized_token_count/token_count*100:.1f}%)"
+                )
+                await ctx.store.set("notes_were_summarized", True)
+            else:
+                await ctx.store.set("notes_were_summarized", False)
+
             # Get current date and time for context
             current_datetime = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
 
@@ -92,7 +140,7 @@ class ActionItemsGenerationWorkflow(Workflow):
 
             # Generate action items with structured output
             action_items = await program.acall(
-                meeting_notes=event.meeting_notes, current_datetime=current_datetime
+                meeting_notes=meeting_notes, current_datetime=current_datetime
             )
 
             # Validate the generated action items
@@ -123,15 +171,49 @@ class ActionItemsGenerationWorkflow(Workflow):
 
     @step
     async def review_action_items(
-        self, event: ReviewRequired
+        self, ctx: Context, event: ReviewRequired
     ) -> StopWithErrorEvent | RefinementRequired:
         """Review generated action items for quality and completeness.
 
         Uses LLMTextCompletionProgram for structured review feedback.
+        Uses summarized notes if available to stay within token limits.
+        Includes convergence detection to prevent infinite loops.
         """
         logger.info("Reviewing generated action items")
 
         try:
+            # Use the meeting notes from the event (which may already be summarized)
+            meeting_notes = event.meeting_notes
+
+            # Check for convergence - detect if we're oscillating between similar states
+            current_action_items_json = event.action_items.model_dump_json(indent=2)
+            previous_action_items = await ctx.store.get(
+                "previous_action_items", default=[]
+            )
+
+            # If we've seen this exact set of action items before, stop to prevent
+            # infinite loop
+            if current_action_items_json in previous_action_items:
+                logger.warning(
+                    "Detected convergence loop - action items "
+                    "returned to previous state. "
+                    "Stopping refinement to prevent infinite loop."
+                )
+                return StopWithErrorEvent(result=event.action_items, error=False)
+
+            # Store current action items for convergence detection (keep last 3)
+            previous_action_items.append(current_action_items_json)
+            if len(previous_action_items) > 3:
+                previous_action_items.pop(0)
+            await ctx.store.set("previous_action_items", previous_action_items)
+
+            # Log token count for review context
+            review_token_count = count_tokens(
+                f"{event.action_items.model_dump_json(indent=2)}\n" f"{meeting_notes}",
+                self.llm,
+            )
+            logger.info(f"Review context token count: {review_token_count}")
+
             # Get current date and time for context
             current_datetime = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
 
@@ -146,7 +228,7 @@ class ActionItemsGenerationWorkflow(Workflow):
             # Get structured review feedback
             review = await review_program.acall(
                 action_items=event.action_items.model_dump_json(indent=2),
-                meeting_notes=event.meeting_notes,
+                meeting_notes=meeting_notes,
                 current_datetime=current_datetime,
             )
 

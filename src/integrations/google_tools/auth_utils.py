@@ -1,10 +1,10 @@
 """General utils for google api"""
 
+import os
 import os.path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google.oauth2.service_account import Credentials as SACred
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 from src.infrastructure.logging.logging_config import get_logger
@@ -24,51 +24,99 @@ SCOPES = [
 
 
 # Authentication function
-def authenticate() -> Credentials:
-    """Handles user authentication and authorization."""
-    logger.info("Starting Google API authentication")
-    try:
-        creds = None
+def authenticate() -> Credentials:  # pylint: disable=too-many-branches
+    """Handles user authentication and authorization using OAuth credentials.
 
-        # The file token.json stores the user's access and refresh tokens, and
-        # is created automatically when the authorization flow completes for
-        # the first time.
-        if os.path.exists("token.json"):
-            logger.debug("Found existing token.json file")
+    This function uses credentials.json and token.json for authentication.
+    For containerized environments, token.json must be pre-generated and mounted.
+
+    Raises:
+        FileNotFoundError: If credentials.json is missing
+        ValueError: If token.json is missing or invalid in container mode
+        Exception: For other authentication errors
+    """
+    logger.info("Starting Google API authentication using OAuth credentials")
+
+    # Check if credentials.json exists
+    if not os.path.exists("credentials.json"):
+        logger.error("credentials.json not found")
+        raise FileNotFoundError(
+            "credentials.json is required for Google API authentication. "
+            "Please ensure the file is present in the working directory."
+        )
+
+    creds = None
+    is_container = os.getenv("RUNNING_IN_CONTAINER", "false").lower() == "true"
+
+    # The file token.json stores the user's access and refresh tokens, and
+    # is created automatically when the authorization flow completes for
+    # the first time.
+    if os.path.exists("token.json"):
+        logger.debug("Found existing token.json file")
+        try:
             creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-        # If there are no (valid) credentials available, let the user log in.
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                logger.info("Refreshing expired credentials")
+            logger.debug("Successfully loaded credentials from token.json")
+        except Exception as err:
+            logger.error(f"Failed to load token.json: {err}")
+            if is_container:
+                raise ValueError(
+                    "Invalid token.json in container mode. "
+                    "Please regenerate token.json locally and remount the volume."
+                ) from err
+    else:
+        logger.warning("token.json not found")
+        if is_container:
+            raise FileNotFoundError(
+                "token.json is required when running in a container. "
+                "Please generate token.json locally first using "
+                "'python scripts/generate_token.py' "
+                "and mount it as a volume in docker-compose.yml"
+            )
+
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            logger.info("Refreshing expired credentials")
+            try:
                 creds.refresh(Request())
-            else:
-                logger.info("Starting OAuth flow for new credentials")
-                # This will open a browser window for you to log in and
-                # authorize the app.
+                # Save the refreshed credentials
+                logger.debug("Saving refreshed credentials to token.json")
+                with open("token.json", "w") as token:
+                    token.write(creds.to_json())
+                logger.info("Successfully refreshed credentials")
+            except Exception as err:
+                logger.error(f"Failed to refresh credentials: {err}")
+                if is_container:
+                    raise ValueError(
+                        "Failed to refresh credentials in container mode. "
+                        "Please regenerate token.json locally and remount the volume."
+                    ) from err
+                raise
+        else:
+            if is_container:
+                raise ValueError(
+                    "No valid credentials found in container mode. "
+                    "Cannot run interactive OAuth flow in container. "
+                    "Please generate token.json locally first using "
+                    "'python scripts/generate_token.py'"
+                )
+
+            logger.info("Starting OAuth flow for new credentials")
+            # This will open a browser window for you to log in and
+            # authorize the app.
+            try:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     "credentials.json", SCOPES
                 )
                 creds = flow.run_local_server(port=0)
-            # Save the credentials for the next run
-            logger.debug("Saving credentials to token.json")
-            with open("token.json", "w") as token:
-                token.write(creds.to_json())
+                # Save the credentials for the next run
+                logger.debug("Saving credentials to token.json")
+                with open("token.json", "w") as token:
+                    token.write(creds.to_json())
+                logger.info("Successfully completed OAuth flow")
+            except Exception as err:
+                logger.error(f"OAuth flow failed: {err}")
+                raise
 
-        logger.info("Google API authentication completed successfully")
-        return creds
-    except Exception as err:
-        logger.error(
-            "Unable to get authenticated using oath due to the "
-            f"following error: {err}"
-        )
-    try:
-        logger.info("Trying service account authentication")
-        creds = SACred.from_service_account_file("service_account.json")
-        logger.info("Google API authentication completed successfully")
-        return creds
-    except Exception as err:
-        logger.error(
-            "Unable to authenticate to service account with the "
-            f"following error: {err}"
-        )
-        raise err
+    logger.info("Google API authentication completed successfully")
+    return creds

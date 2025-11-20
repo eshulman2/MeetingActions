@@ -1,6 +1,8 @@
 """Simple MCP server serving google tools"""
 
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
@@ -19,6 +21,14 @@ except Exception as e:
 
 config = get_config()
 mcp_server = FastMCP("Google tools mcp server")
+
+
+# Health check endpoint using FastMCP custom_route
+@mcp_server.custom_route("/health", methods=["GET"])
+async def health_check(_request: Request) -> PlainTextResponse:
+    """Health check endpoint for container monitoring"""
+    return PlainTextResponse("OK")
+
 
 for tool in tools:
     logger.debug(f"Registering tool: {tool.metadata.name}")

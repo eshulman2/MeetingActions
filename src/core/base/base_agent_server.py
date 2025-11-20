@@ -193,8 +193,17 @@ class BaseAgentServer(BaseServer):
         @self.app.get("/info")
         async def get_info():
             """Return agent information and metadata."""
-            # Use 127.0.0.1 for endpoint if host is 0.0.0.0 (binding address)
-            endpoint_host = "127.0.0.1" if self.host == "0.0.0.0" else self.host
+            config = get_config()
+            # Use agent_endpoint from config if set (for containerized deployments)
+            # Otherwise, use 127.0.0.1 for endpoint if host is 0.0.0.0 (binding address)
+            if config.config.agent_endpoint:
+                endpoint = config.config.agent_endpoint
+                health_endpoint = f"{config.config.agent_endpoint}/health"
+            else:
+                endpoint_host = "127.0.0.1" if self.host == "0.0.0.0" else self.host
+                endpoint = f"http://{endpoint_host}:{self.port}"
+                health_endpoint = f"http://{endpoint_host}:{self.port}/health"
+
             return {
                 "agent_id": self.agent_id,
                 "name": self.app.title,
@@ -204,8 +213,8 @@ class BaseAgentServer(BaseServer):
                 "tools": [
                     tool.metadata.name for tool in getattr(self.service, "tools", [])
                 ],
-                "endpoint": f"http://{endpoint_host}:{self.port}",
-                "health_endpoint": (f"http://{endpoint_host}:{self.port}/health"),
+                "endpoint": endpoint,
+                "health_endpoint": health_endpoint,
             }
 
         @self.app.get("/discover")
@@ -302,16 +311,23 @@ class BaseAgentServer(BaseServer):
         Retry logic is handled by the registry client's @with_retry decorator.
         """
         try:
-            # Use 127.0.0.1 for endpoint if host is 0.0.0.0 (binding address)
-            # so that other services can actually reach this agent
-            endpoint_host = "127.0.0.1" if self.host == "0.0.0.0" else self.host
+            config = get_config()
+            # Use agent_endpoint from config if set (for containerized deployments)
+            # Otherwise, use 127.0.0.1 for endpoint if host is 0.0.0.0 (binding address)
+            if config.config.agent_endpoint:
+                endpoint = config.config.agent_endpoint
+                health_endpoint = f"{config.config.agent_endpoint}/health"
+            else:
+                endpoint_host = "127.0.0.1" if self.host == "0.0.0.0" else self.host
+                endpoint = f"http://{endpoint_host}:{self.port}"
+                health_endpoint = f"http://{endpoint_host}:{self.port}/health"
 
             agent_info = AgentInfo(
                 agent_id=self.agent_id,
                 name=self.app.title,
                 description=self.app.description,
-                endpoint=f"http://{endpoint_host}:{self.port}",
-                health_endpoint=(f"http://{endpoint_host}:{self.port}/health"),
+                endpoint=endpoint,
+                health_endpoint=health_endpoint,
                 version=self.app.version,
                 status="active",
                 last_heartbeat=datetime.now(timezone.utc),

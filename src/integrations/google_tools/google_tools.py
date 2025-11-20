@@ -9,7 +9,6 @@ from googleapiclient.errors import HttpError
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
 from src.infrastructure.cache import get_document_cache
-from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 from src.integrations.google_tools.auth_utils import authenticate
 
@@ -356,15 +355,6 @@ class GoogleToolSpec(BaseToolSpec):
                 f"Successfully extracted text content from document, "
                 f"length: {length} characters"
             )
-            config = get_config()
-
-            if length > config.config.max_document_length:
-                logger.warning(
-                    f"Document content length ({length}) exceeds the maximum "
-                    f"allowed ({config.config.max_document_length}). "
-                    "Truncating content."
-                )
-                return "Document exceeds maximum length please read as paragraphs"
 
             return text_content
 
