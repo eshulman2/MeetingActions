@@ -42,7 +42,7 @@ mcp_server = FastMCP("JIRA tools mcp server")
 
 # Health check endpoint using FastMCP custom_route
 @mcp_server.custom_route("/health", methods=["GET"])
-async def health_check(request: Request) -> PlainTextResponse:
+async def health_check(_request: Request) -> PlainTextResponse:
     """Health check endpoint for container monitoring"""
     return PlainTextResponse("OK")
 

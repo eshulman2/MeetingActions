@@ -64,7 +64,7 @@ def get_max_context_tokens(llm: LLM) -> int:
         metadata = llm.metadata
         if hasattr(metadata, "context_window"):
             return metadata.context_window
-        elif hasattr(metadata, "max_tokens"):
+        if hasattr(metadata, "max_tokens"):
             return metadata.max_tokens
 
         # Fallback: check if llm has the attribute directly

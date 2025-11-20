@@ -49,6 +49,7 @@ def set_token_ownership(token_path: str) -> None:
             capture_output=True,
             text=True,
             timeout=10,
+            check=False,
         )
 
         if result.returncode == 0:
@@ -73,7 +74,7 @@ def set_token_ownership(token_path: str) -> None:
         print(f"⚠ Warning: Could not run podman unshare: {e}")
 
 
-def main():
+def main():  # pylint: disable=too-many-statements
     """Generate token.json using OAuth flow."""
     print("=" * 60)
     print("Google OAuth Token Generator")
@@ -121,7 +122,7 @@ def main():
                 # Ensure ownership and permissions are correct
                 set_token_ownership(token_path)
                 print()
-                print("You can now use these credentials in " "your docker containers.")
+                print("You can now use these credentials in your docker containers.")
                 print(
                     "The token.json file will be automatically "
                     "refreshed when needed."

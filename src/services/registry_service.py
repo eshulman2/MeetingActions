@@ -20,17 +20,17 @@ logger = get_logger("registry_service")
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(application: FastAPI):
     """Manage application lifespan"""
     # Startup
     logger.info("Starting Agent Registry Service")
 
     # Initialize registry during startup (not at module import)
     logger.info("Initializing agent registry...")
-    app.state.registry = AgentRegistry()
+    application.state.registry = AgentRegistry()
     logger.info("Agent registry initialized")
 
-    cleanup_task = asyncio.create_task(cleanup_stale_agents(app))
+    cleanup_task = asyncio.create_task(cleanup_stale_agents(application))
     logger.info("Registry service started successfully")
 
     try:
@@ -251,12 +251,14 @@ async def root() -> Dict[str, Any]:
 
 
 # Background task for cleanup
-async def cleanup_stale_agents(app: FastAPI) -> None:
+async def cleanup_stale_agents(application: FastAPI) -> None:
     """Background task to clean up stale agents"""
     while True:
         try:
             # Cleanup agents older than 15 minutes (1.5x the TTL for safety margin)
-            stale_count = app.state.registry.cleanup_stale_agents(max_age_minutes=15)
+            stale_count = application.state.registry.cleanup_stale_agents(
+                max_age_minutes=15
+            )
             if stale_count > 0:
                 logger.info(f"Cleaned up {stale_count} stale agents")
         except Exception as e:

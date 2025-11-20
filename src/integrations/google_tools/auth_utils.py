@@ -24,7 +24,7 @@ SCOPES = [
 
 
 # Authentication function
-def authenticate() -> Credentials:
+def authenticate() -> Credentials:  # pylint: disable=too-many-branches
     """Handles user authentication and authorization using OAuth credentials.
 
     This function uses credentials.json and token.json for authentication.
