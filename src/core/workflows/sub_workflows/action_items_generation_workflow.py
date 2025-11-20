@@ -58,12 +58,12 @@ class ActionItemsGenerationWorkflow(Workflow):
     structured, validated output without manual JSON parsing.
     """
 
-    def __init__(self, llm, *args, max_iterations: int = 20, **kwargs):
+    def __init__(self, llm, *args, max_iterations: int = 5, **kwargs):
         """Initialize the workflow.
 
         Args:
             llm: Language model for generating action items
-            max_iterations: Maximum number of refinement iterations
+            max_iterations: Maximum number of refinement iterations (default: 5)
         """
         super().__init__(*args, **kwargs)
         self.llm = llm
@@ -177,12 +177,35 @@ class ActionItemsGenerationWorkflow(Workflow):
 
         Uses LLMTextCompletionProgram for structured review feedback.
         Uses summarized notes if available to stay within token limits.
+        Includes convergence detection to prevent infinite loops.
         """
         logger.info("Reviewing generated action items")
 
         try:
             # Use the meeting notes from the event (which may already be summarized)
             meeting_notes = event.meeting_notes
+
+            # Check for convergence - detect if we're oscillating between similar states
+            current_action_items_json = event.action_items.model_dump_json(indent=2)
+            previous_action_items = await ctx.store.get(
+                "previous_action_items", default=[]
+            )
+
+            # If we've seen this exact set of action items before, stop to prevent
+            # infinite loop
+            if current_action_items_json in previous_action_items:
+                logger.warning(
+                    "Detected convergence loop - action items "
+                    "returned to previous state. "
+                    "Stopping refinement to prevent infinite loop."
+                )
+                return StopWithErrorEvent(result=event.action_items, error=False)
+
+            # Store current action items for convergence detection (keep last 3)
+            previous_action_items.append(current_action_items_json)
+            if len(previous_action_items) > 3:
+                previous_action_items.pop(0)
+            await ctx.store.set("previous_action_items", previous_action_items)
 
             # Log token count for review context
             review_token_count = count_tokens(

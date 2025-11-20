@@ -53,14 +53,14 @@ class MeetingNotesAndGenerationOrchestrator(Workflow):
         self,
         llm,
         *args: Any,
-        max_iterations: int = 3,
+        max_iterations: int = 5,
         **kwargs: Any,
     ):
         """Initialize the orchestrator workflow.
 
         Args:
             llm: Language model for sub-workflows
-            max_iterations: Maximum number of refinement iterations
+            max_iterations: Maximum number of refinement iterations (default: 5)
         """
         super().__init__(*args, **kwargs)
         self.llm = llm

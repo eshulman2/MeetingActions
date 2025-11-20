@@ -123,7 +123,7 @@ You are reviewing action items for quality and completeness. You must respond wi
 CURRENT DATE AND TIME:
 Today's date and time: {current_datetime}
 
-Use this as a reference when reviewing due dates to ensure they are accurate and properly interpreted from the meeting notes.
+Use this as a reference when interpreting relative dates from the meeting notes (e.g., "tomorrow", "next week").
 
 ACTION ITEMS TO REVIEW:
 {action_items}
@@ -133,10 +133,12 @@ ORIGINAL MEETING NOTES:
 
 Please analyze the action items and determine if they need improvements. Consider:
 1. Are all action items clear and actionable?
-2. Are owners and due dates properly specified and accurate relative to the current date/time above?
-3. Are any important action items missing from the meeting notes?
-4. Are the action items properly broken down into manageable tasks?
-5. Are relative dates (e.g., "tomorrow", "next week") correctly converted to ISO format dates?
+2. Are owners and due dates properly specified?
+3. Are due dates accurately interpreted from the meeting notes context (relative dates should be calculated from the meeting date, NOT from today's date)?
+4. Are any important action items missing from the meeting notes?
+5. Are the action items properly broken down into manageable tasks?
+
+IMPORTANT: If the meeting notes are from the past, action items with past due dates are acceptable. Focus on whether the dates are correctly interpreted from the meeting context, not whether they are in the future.
 
 You must respond with a JSON object in this exact format:
 {{
