@@ -37,4 +37,10 @@ repos:
     rev: v3.3.2
     hooks:
       - id: pylint
+        name: pylint (source code)
         args: ["--rcfile=.pylintrc", "--disable=import-error,no-name-in-module"]
+        exclude: ^tests/
+      - id: pylint
+        name: pylint (tests)
+        args: ["--rcfile=tests/.pylintrc", "--disable=import-error,no-name-in-module"]
+        files: ^tests/

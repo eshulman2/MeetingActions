@@ -112,12 +112,6 @@ class ConfigSchema(BaseModel):
             "registry (for containerized deployments)"
         ),
     )
-    agents: Dict[str, str] = Field(
-        default_factory=dict, description="Dictionary of agent names to endpoints"
-    )
-    meeting_notes_endpoint: str | None = Field(
-        default=None, description="Meeting notes service endpoint"
-    )
 
 
 class ConfigReader(metaclass=SingletonMeta):

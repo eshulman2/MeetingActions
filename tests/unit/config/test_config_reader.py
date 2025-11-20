@@ -22,7 +22,7 @@ class TestConfigSchema:
 
     def test_default_config_creation(self):
         """Test creating config with default values."""
-        config = ConfigSchema(agents={"test": "http://localhost:8000"})
+        config = ConfigSchema()
 
         assert config.llm == "Gemini"
         assert config.model == "gemini-2.0-flash"
@@ -75,7 +75,7 @@ class TestConfigSchema:
                 "REDIS_PASSWORD": "test_redis_pass",
             },
         ):
-            config = ConfigSchema(agents={"test": "http://localhost:8000"})
+            config = ConfigSchema()
 
             assert config.model_api_key == "test_key_from_env"
             assert config.observability.secret_key == "test_langfuse_secret"
