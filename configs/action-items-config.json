@@ -11,10 +11,5 @@
         "host": "http://host.docker.internal:3000"
     },
     "google_mcp": "http://google-mcp:8100/mcp",
-    "registry_endpoint": "http://registry-service:8000",
-    "agents": {
-        "google": "http://google-agent:8000",
-        "jira": "http://jira-agent:8000"
-    },
-    "meeting_notes_endpoint": "http://google-agent:8000/meeting-notes"
+    "registry_endpoint": "http://registry-service:8000"
 }

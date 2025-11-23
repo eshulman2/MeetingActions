@@ -49,8 +49,6 @@ def temp_config_file():
             "port": 6379,
             "password": None,
         },
-        "meeting_notes_endpoint": "http://127.0.0.1:8002/meeting-notes",
-        "agents": {"jira": "http://127.0.0.1:8000", "google": "http://127.0.0.1:8001"},
     }
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:

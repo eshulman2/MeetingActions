@@ -5,7 +5,6 @@
     "additional_model_parameter": {
         "api_base": "https://someendpoint/v1beta/openai",
         "is_chat_model": true
-
     },
     "tools_config": {
         "jira_tool": {
@@ -17,7 +16,6 @@
         "verbose": true
     },
     "mcp_config": {
-        "port": 8100,
         "servers": [
             "http://127.0.0.1:8100/mcp"
         ]
@@ -29,16 +27,11 @@
         "host": "http://localhost:3000"
     },
     "cache_config": {
-        "enabled": true,
+        "enable": true,
         "ttl_hours": 1,
         "max_size_mb": 100,
         "host": "localhost",
         "port": 6380,
         "password": "12345"
-    },
-    "agents": {
-     "google": "http://127.0.0.1:8000",
-     "jira": "http://127.0.0.1:8001"
-    },
-    "meeting_notes_endpoint": "http://127.0.0.1:8000/meeting-notes"
+    }
 }

@@ -244,10 +244,7 @@ class TestGoogleToolSpec:
 
         assert "not found" in result.lower()
 
-    @patch("src.integrations.google_tools.google_tools.get_config")
-    def test_fetch_google_doc_content_from_cache(
-        self, mock_get_config, google_tool_spec
-    ):
+    def test_fetch_google_doc_content_from_cache(self, google_tool_spec):
         """Test retrieving document content from cache."""
         google_tool_spec.cache.get_document_content.return_value = "Cached content"
 
