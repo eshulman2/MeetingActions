@@ -1,7 +1,7 @@
 # MeetingActions - Architecture Documentation
 
-**Date**: 2025-10-19
-**Version**: 1.0
+**Date**: 2025-11-23
+**Version**: 1.1
 **Purpose**: Comprehensive architecture diagrams and documentation
 
 ---
@@ -199,7 +199,150 @@
 
 ---
 
-## 10. Key Architectural Decisions
+## 10. Progressive Summarization Architecture
+
+### Workflow Refactoring
+
+**Challenge**: The `generate_action_items` step had dual responsibilities:
+1. Token management and summarization (90 lines)
+2. Action item generation (40 lines)
+
+**Solution**: Separated into two focused steps:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  StartEvent (meeting_notes)                         │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│  Step 1: prepare_meeting_notes                      │
+│  • Token counting and threshold checking             │
+│  • Progressive vs simple summarization decision      │
+│  • Strategy selection and execution                  │
+│  • Semantic chunking for very large documents        │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼ NotesReadyEvent
+┌─────────────────────────────────────────────────────┐
+│  Step 2: generate_action_items                      │
+│  • Create LLM program                               │
+│  • Generate action items                            │
+│  • Validate output                                  │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼ ReviewRequired
+┌─────────────────────────────────────────────────────┐
+│  Step 3: review_action_items                        │
+│  (unchanged)                                        │
+└─────────────────────────────────────────────────────┘
+```
+
+### Event-Based Communication
+
+**NotesReadyEvent** carries metadata between steps:
+
+```python
+class NotesReadyEvent(Event):
+    meeting_notes: str           # Prepared notes
+    original_notes: str           # Original for reference
+    was_summarized: bool          # Summarization occurred?
+    progressive_passes: int       # Number of passes
+    was_chunked: bool            # Chunking used?
+    num_chunks: int              # Chunks processed
+```
+
+**Benefits**:
+- ✅ **Separation of Concerns**: Each step has single responsibility
+- ✅ **Event-Driven**: Clean data flow through workflow
+- ✅ **Testable**: Steps can be tested independently
+- ✅ **Observable**: Metadata visible in logs and traces
+- ✅ **Stateless**: No context storage, pure event communication
+
+### Multi-Pass Summarization
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Original Text (50,000 tokens)                      │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│  Pass 1: Balanced Strategy (60% retention)          │
+│  50,000 → 30,000 tokens                             │
+│  • Extract key points and topics                    │
+│  • Structured output via Pydantic                   │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│  Pass 2: Balanced Strategy (40% retention)          │
+│  30,000 → 12,000 tokens                             │
+│  • Further condense while preserving essentials     │
+└──────────────────┬──────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────┐
+│  Target Reached (12,000 < 15,000 target)            │
+│  • 76% overall reduction                            │
+│  • Critical information preserved                   │
+└─────────────────────────────────────────────────────┘
+```
+
+### Semantic Chunking for Very Large Documents
+
+For documents exceeding the chunking threshold (default: 50% of context window):
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Extremely Large Document (150,000 tokens)           │
+└──────────────────┬──────────────────────────────────┘
+                   │
+    ┌──────────────┴──────────────┐
+    │  Chunk by Tokens             │
+    │  • Size: 40% of context      │
+    │  • Overlap: 500 tokens       │
+    └──────────────┬───────────────┘
+                   │
+┌──────────────────┴────────────────────────────────┐
+│  Parallel Processing (asyncio.gather)             │
+│  Chunk 1 → Summary 1 (50k → 30k tokens)           │
+│  Chunk 2 → Summary 2 (50k → 30k tokens)           │
+│  Chunk 3 → Summary 3 (50k → 30k tokens)           │
+└──────────────────┬────────────────────────────────┘
+                   │
+    ┌──────────────┴──────────────┐
+    │  Combine Summaries           │
+    │  Total: ~90k tokens          │
+    └──────────────┬───────────────┘
+                   │
+    ┌──────────────┴──────────────┐
+    │  Progressive Passes          │
+    │  Pass 1: 90k → 54k           │
+    │  Pass 2: 54k → 22k           │
+    └──────────────────────────────┘
+```
+
+### Configuration-Driven Behavior
+
+```python
+config.progressive_summarization = {
+    "threshold_ratio": 0.75,      # Trigger when > 75% of max context
+    "max_passes": 3,              # Up to 3 passes
+    "strategy": "balanced",       # aggressive|balanced|conservative
+    "chunk_threshold_ratio": 0.5, # Chunk at 50% of context window
+    "chunk_size_ratio": 0.4,      # 40% per chunk
+    "chunk_overlap_tokens": 500   # Overlap between chunks
+}
+```
+
+**Note**: Progressive summarization (including chunking) **automatically activates** when documents exceed the threshold. There is no enable/disable flag—this ensures robust handling of large documents.
+
+**Documentation**: See [PROGRESSIVE_SUMMARIZATION.md](./PROGRESSIVE_SUMMARIZATION.md) for full details.
+
+---
+
+## 11. Key Architectural Decisions
 
 ### Design Principles
 
@@ -239,7 +382,7 @@
 
 ---
 
-## 11. Scalability Considerations
+## 12. Scalability Considerations
 
 ### Current Limitations
 
@@ -256,7 +399,7 @@
 
 ---
 
-## 12. Security Architecture
+## 13. Security Architecture
 
 ### Current Security Model
 
@@ -285,6 +428,10 @@
 ✅ **Unified schema**: Consistent AgentResponse across all agents
 ✅ **Observable**: Langfuse integration for LLM tracing
 ✅ **Containerized**: Docker for easy deployment
+✅ **Progressive Summarization**: Multi-pass reduction for long documents
+  - Separated workflow steps for better maintainability
+  - Event-based communication with metadata tracking
+  - Configurable strategies and automatic chunking
 
 **Next Steps for Scaling:**
 1. Implement API authentication
@@ -293,6 +440,6 @@
 
 ---
 
-**Last Updated**: 2025-10-19
-**Maintained By**: Ella Shulman and Claude
+**Last Updated**: 2025-11-23
+**Maintained By**: Ella Shulman
 **License**: See LICENSE file

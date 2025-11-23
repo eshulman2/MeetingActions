@@ -4,50 +4,15 @@ This module provides utilities for:
 - Counting tokens in text using LlamaIndex (model-agnostic)
 - Detecting when text exceeds token limits
 - Chunking large text into manageable pieces
-- Summarizing long meeting notes
 """
 
 from typing import List
 
 from llama_index.core.llms import LLM
-from llama_index.core.program import LLMTextCompletionProgram
-from pydantic import BaseModel, Field
 
 from src.infrastructure.logging.logging_config import get_logger
 
 logger = get_logger("utils.token_utils")
-
-
-class MeetingNotesSummary(BaseModel):
-    """Summarized version of meeting notes."""
-
-    summary: str = Field(
-        ..., description="Concise summary preserving all key points and action items"
-    )
-    key_decisions: List[str] = Field(
-        default_factory=list, description="Critical decisions made in the meeting"
-    )
-    topics_discussed: List[str] = Field(
-        default_factory=list, description="Main topics covered"
-    )
-
-
-SUMMARIZATION_PROMPT = """
-You are an expert at summarizing meeting notes while preserving all critical
-information.
-
-Given the following meeting notes, create a concise summary that:
-1. Preserves ALL action items, decisions, and commitments
-2. Maintains names of people and their responsibilities
-3. Keeps important dates, deadlines, and metrics
-4. Removes redundant discussion and filler content
-5. Uses bullet points for clarity
-
-Meeting Notes:
-{meeting_notes}
-
-Provide a summary that is approximately 30-40% of the original length while retaining
-all actionable information."""
 
 
 def get_max_context_tokens(llm: LLM) -> int:
@@ -191,67 +156,6 @@ def chunk_text_by_tokens(
 
     logger.info(f"Split {total_tokens} tokens into {len(chunks)} chunks")
     return chunks
-
-
-async def summarize_meeting_notes(
-    meeting_notes: str, llm: LLM, target_length_ratio: float = 0.4
-) -> str:
-    """Summarize long meeting notes while preserving key information.
-
-    Args:
-        meeting_notes: The full meeting notes text
-        llm: Language model to use for summarization
-        target_length_ratio: Target summary length as ratio of original (0.4 = 40%)
-
-    Returns:
-        Summarized meeting notes
-    """
-    logger.info(
-        f"Summarizing meeting notes ({len(meeting_notes)} chars) "
-        f"to ~{int(target_length_ratio * 100)}% of original length"
-    )
-
-    try:
-        # Create structured program for summarization
-        program = LLMTextCompletionProgram.from_defaults(
-            llm=llm,
-            output_cls=MeetingNotesSummary,
-            prompt=SUMMARIZATION_PROMPT,
-            verbose=False,
-        )
-
-        # Generate summary
-        summary_result = await program.acall(meeting_notes=meeting_notes)
-
-        if not isinstance(summary_result, MeetingNotesSummary):
-            logger.error("Summary output is not MeetingNotesSummary type")
-            raise ValueError("Invalid summary structure generated")
-
-        # Format the summary for use
-        formatted_summary = f"""# Meeting Summary
-
-{summary_result.summary}
-
-## Key Decisions
-{chr(10).join(f"- {decision}" for decision in summary_result.key_decisions)}
-
-## Topics Discussed
-{chr(10).join(f"- {topic}" for topic in summary_result.topics_discussed)}
-"""
-
-        logger.info(
-            f"Successfully summarized notes: "
-            f"{len(meeting_notes)} -> {len(formatted_summary)} chars "
-            f"({len(formatted_summary)/len(meeting_notes)*100:.1f}%)"
-        )
-
-        return formatted_summary
-
-    except Exception as e:
-        logger.error(f"Error summarizing meeting notes: {e}")
-        # Fallback: use simple truncation
-        logger.warning("Falling back to simple truncation")
-        return truncate_text_by_tokens(meeting_notes, max_tokens=8000, llm=llm)
 
 
 def estimate_prompt_tokens(

@@ -33,5 +33,13 @@
         "host": "localhost",
         "port": 6380,
         "password": "12345"
+    },
+    "progressive_summarization": {
+        "threshold_ratio": 0.75,
+        "max_passes": 3,
+        "strategy": "balanced",
+        "chunk_threshold_ratio": 0.5,
+        "chunk_size_ratio": 0.4,
+        "chunk_overlap_tokens": 500
     }
 }

@@ -1,0 +1,15 @@
+You are creating a key points summary from a previous summary.
+
+Goal: Extract and organize the most important information.
+
+Focus on:
+1. Group related action items together
+2. Consolidate related decisions
+3. Preserve deadlines and metrics
+4. Maintain participant accountability
+5. Remove background discussion
+
+Previous Summary:
+{text}
+
+Provide a structured key points summary organized by topic.

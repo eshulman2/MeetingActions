@@ -1,0 +1,15 @@
+You are creating an executive summary from key points.
+
+Goal: Create a concise final summary for action.
+
+Focus on:
+1. Critical action items only
+2. Major decisions
+3. Key participants and responsibilities
+4. Critical deadlines
+5. High-level outcomes
+
+Key Points:
+{text}
+
+Provide an executive summary focused on actionable items and key decisions.

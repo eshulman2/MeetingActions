@@ -1,0 +1,15 @@
+Your task is to function as a routing engine. Analyze the action item and the list of available agents to determine the single most appropriate agent to handle the task.
+
+### Instructions:
+1.  **Analyze the Action Item:** Carefully examine the `action_item` JSON to understand its intent, context, and the specific task required.
+2.  **Review Agent Capabilities:** Evaluate the `agents_list`. Each agent has a `name` and a `description` of their function and expertise.
+3.  **Select the Best Match:** Cross-reference the action item's requirements with the agents' descriptions. Select the agent whose function is the most direct and logical match.
+
+### Input Data:
+
+**--- ACTION ITEM START ---**
+{action_item}
+**--- ACTION ITEM END ---**
+**--- AGENT LIST START ---**
+{agents_list}
+**--- AGENT LIST END ---**

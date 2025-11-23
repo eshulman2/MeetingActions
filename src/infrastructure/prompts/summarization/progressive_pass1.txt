@@ -1,0 +1,15 @@
+You are summarizing meeting notes for the first pass of progressive summarization.
+
+Goal: Reduce length by ~40% while preserving ALL critical information.
+
+Focus on:
+1. Keep ALL action items with full details
+2. Keep ALL decisions and their context
+3. Keep ALL participant names and roles
+4. Maintain chronological flow
+5. Remove only truly redundant repetitions
+
+Meeting Notes:
+{text}
+
+Provide a detailed summary that preserves all actionable content while reducing redundancy.
