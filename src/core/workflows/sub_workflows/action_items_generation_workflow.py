@@ -8,13 +8,7 @@ from datetime import datetime
 
 from llama_index.core.memory import Memory
 from llama_index.core.program import LLMTextCompletionProgram
-from llama_index.core.workflow import (
-    Context,
-    Event,
-    StartEvent,
-    Workflow,
-    step,
-)
+from llama_index.core.workflow import Context, Event, StartEvent, Workflow, step
 
 from src.core.schemas.workflow_models import ActionItemsList, ReviewFeedback
 from src.core.workflows.common_events import StopWithErrorEvent
@@ -25,13 +19,13 @@ from src.infrastructure.prompts.prompts import (
     REFINEMENT_PROMPT,
     REVIEWER_PROMPT,
 )
-from src.infrastructure.utils.progressive_summarization import (
+from src.shared.llm.summarization.progressive import (
     ProgressiveSummaryResult,
     SummarizationStrategy,
     progressive_summarize,
     summarize_meeting_notes,
 )
-from src.infrastructure.utils.token_utils import (
+from src.shared.llm.token_utils import (
     count_tokens,
     get_max_context_tokens,
     should_summarize_notes,

@@ -8,7 +8,6 @@ from fastapi import HTTPException
 from langfuse import get_client as get_langfuse_client
 from pydantic import BaseModel, PastDate
 
-from src.core.base.base_workflow_server import BaseWorkflowServer
 from src.core.schemas.workflow_models import ActionItemsList
 from src.core.workflows.action_items_dispatch_orchestrator import (
     ActionItemsDispatchOrchestrator,
@@ -19,6 +18,7 @@ from src.core.workflows.meeting_notes_and_generation_orchestrator import (
 from src.infrastructure.config import get_config, get_model
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.observability.observability import set_up_langfuse
+from src.shared.base.base_workflow_server import BaseWorkflowServer
 
 set_up_langfuse()
 logger = get_logger("workflow_server.action_items")

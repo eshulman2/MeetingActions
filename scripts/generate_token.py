@@ -27,7 +27,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-from src.integrations.google_tools.auth_utils import SCOPES
+from src.integrations.google.auth import SCOPES
 
 # pylint: enable=wrong-import-position
 

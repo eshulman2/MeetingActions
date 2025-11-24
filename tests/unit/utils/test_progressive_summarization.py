@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.infrastructure.utils.progressive_summarization import (
+from src.shared.llm.summarization.progressive import (
     ChunkSummary,
     PassSummaryOutput,
     ProgressiveSummaryResult,
@@ -78,14 +78,13 @@ class TestPerformSummaryPass:
 
         # Mock token counting
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.side_effect = [5000, 2000]  # input, output
 
             # Mock LLMTextCompletionProgram
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "LLMTextCompletionProgram"
+                "src.shared.llm.summarization.progressive.LLMTextCompletionProgram"
             ) as mock_program_class:
                 mock_program = MagicMock()
                 mock_program_class.from_defaults.return_value = mock_program
@@ -120,20 +119,19 @@ class TestPerformSummaryPass:
         mock_llm = MagicMock()
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.side_effect = [5000, 1800]  # input, truncated output
 
             # Mock LLMTextCompletionProgram to raise error
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "LLMTextCompletionProgram"
+                "src.shared.llm.summarization.progressive.LLMTextCompletionProgram"
             ) as mock_program_class:
                 mock_program_class.from_defaults.side_effect = Exception("LLM error")
 
                 # Mock truncation
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization."
+                    "src.shared.llm.summarization.progressive."
                     "truncate_text_by_tokens"
                 ) as mock_truncate:
                     mock_truncate.return_value = "Truncated text"
@@ -160,7 +158,7 @@ class TestProgressiveSummarize:
         mock_llm = MagicMock()
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.return_value = 1000  # Already below target
 
@@ -191,14 +189,13 @@ class TestProgressiveSummarize:
             return result
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.side_effect = mock_count_tokens
 
             # Mock get_max_context_tokens to prevent chunking
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "get_max_context_tokens"
+                "src.shared.llm.summarization.progressive.get_max_context_tokens"
             ) as mock_max_context:
                 mock_max_context.return_value = (
                     128000  # Large enough to not trigger chunking
@@ -206,8 +203,7 @@ class TestProgressiveSummarize:
 
                 # Mock perform_summary_pass
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization."
-                    "perform_summary_pass"
+                    "src.shared.llm.summarization.progressive.perform_summary_pass"
                 ) as mock_perform:
 
                     async def mock_pass(text, llm, pass_number, target_tokens):
@@ -254,22 +250,20 @@ class TestProgressiveSummarize:
             return result
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.side_effect = mock_count_tokens
 
             # Mock get_max_context_tokens to prevent chunking
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "get_max_context_tokens"
+                "src.shared.llm.summarization.progressive.get_max_context_tokens"
             ) as mock_max_context:
                 mock_max_context.return_value = (
                     128000  # Large enough to not trigger chunking
                 )
 
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization."
-                    "perform_summary_pass"
+                    "src.shared.llm.summarization.progressive.perform_summary_pass"
                 ) as mock_perform:
 
                     async def mock_pass(text, llm, pass_number, target_tokens):
@@ -330,13 +324,12 @@ class TestSummarizeChunk:
         mock_llm = MagicMock()
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.side_effect = [5000, 3000]  # input, output
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "LLMTextCompletionProgram"
+                "src.shared.llm.summarization.progressive.LLMTextCompletionProgram"
             ) as mock_program_class:
                 mock_program = MagicMock()
                 mock_program_class.from_defaults.return_value = mock_program
@@ -368,18 +361,17 @@ class TestSummarizeChunk:
         mock_llm = MagicMock()
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.side_effect = [5000, 2800]
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "LLMTextCompletionProgram"
+                "src.shared.llm.summarization.progressive.LLMTextCompletionProgram"
             ) as mock_program_class:
                 mock_program_class.from_defaults.side_effect = Exception("LLM error")
 
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization."
+                    "src.shared.llm.summarization.progressive."
                     "truncate_text_by_tokens"
                 ) as mock_truncate:
                     mock_truncate.return_value = "Truncated chunk"
@@ -405,20 +397,19 @@ class TestSummarizeWithChunking:
         mock_llm = MagicMock()
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             # Original: 100k, combined chunks: 15k
             mock_count.side_effect = [100000, 15000]
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "chunk_text_by_tokens"
+                "src.shared.llm.summarization.progressive.chunk_text_by_tokens"
             ) as mock_chunk:
                 # Simulate 3 chunks
                 mock_chunk.return_value = ["chunk1", "chunk2", "chunk3"]
 
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization.summarize_chunk"
+                    "src.shared.llm.summarization.progressive.summarize_chunk"
                 ) as mock_summarize_chunk:
 
                     async def mock_chunk_summary(chunk, chunk_number, llm, **kwargs):
@@ -453,19 +444,18 @@ class TestSummarizeWithChunking:
         mock_llm = MagicMock()
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             # Original: 100k, combined chunks: 8k (within 10k target)
             mock_count.side_effect = [100000, 8000]
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "chunk_text_by_tokens"
+                "src.shared.llm.summarization.progressive.chunk_text_by_tokens"
             ) as mock_chunk:
                 mock_chunk.return_value = ["chunk1", "chunk2"]
 
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization.summarize_chunk"
+                    "src.shared.llm.summarization.progressive.summarize_chunk"
                 ) as mock_summarize_chunk:
 
                     async def mock_chunk_summary(chunk, chunk_number, llm, **kwargs):
@@ -502,21 +492,20 @@ class TestProgressiveSummarizeWithChunking:
         mock_llm = MagicMock()
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             # Original: 100k tokens
             mock_count.return_value = 100000
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "get_max_context_tokens"
+                "src.shared.llm.summarization.progressive.get_max_context_tokens"
             ) as mock_max_context:
                 # Context window: 128k, threshold (50%): 64k
                 # 100k > 64k, so chunking should trigger
                 mock_max_context.return_value = 128000
 
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization."
+                    "src.shared.llm.summarization.progressive."
                     "summarize_with_chunking"
                 ) as mock_chunk_summarize:
 
@@ -540,7 +529,7 @@ class TestProgressiveSummarizeWithChunking:
                     # Mock progressive passes (won't be called if
                     # chunking reduces enough)
                     with patch(
-                        "src.infrastructure.utils.progressive_summarization."
+                        "src.shared.llm.summarization.progressive."
                         "perform_summary_pass"
                     ) as mock_perform:
 
@@ -582,13 +571,12 @@ class TestSummarizeMeetingNotes:
         meeting_text = "This is a long meeting with many discussions and decisions."
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization."
-            "LLMTextCompletionProgram"
+            "src.shared.llm.summarization.progressive.LLMTextCompletionProgram"
         ) as mock_program_class:
             mock_program = MagicMock()
             mock_program_class.from_defaults.return_value = mock_program
 
-            from src.infrastructure.utils.progressive_summarization import (
+            from src.shared.llm.summarization.progressive import (
                 MeetingNotesSummary,
                 summarize_meeting_notes,
             )
@@ -620,18 +608,16 @@ class TestSummarizeMeetingNotes:
         meeting_text = "Meeting notes that will fail to summarize."
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization."
-            "LLMTextCompletionProgram"
+            "src.shared.llm.summarization.progressive.LLMTextCompletionProgram"
         ) as mock_program_class:
             mock_program_class.from_defaults.side_effect = Exception("LLM error")
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "truncate_text_by_tokens"
+                "src.shared.llm.summarization.progressive.truncate_text_by_tokens"
             ) as mock_truncate:
                 mock_truncate.return_value = "Truncated meeting notes"
 
-                from src.infrastructure.utils.progressive_summarization import (
+                from src.shared.llm.summarization.progressive import (
                     summarize_meeting_notes,
                 )
 
@@ -654,7 +640,7 @@ class TestEdgeCases:
         mock_llm = MagicMock()
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.return_value = 0
 
@@ -677,7 +663,7 @@ class TestEdgeCases:
         small_text = "Just a few words."
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.return_value = 5  # Very small
 
@@ -707,19 +693,17 @@ class TestEdgeCases:
             return result
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.side_effect = mock_count_tokens
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "get_max_context_tokens"
+                "src.shared.llm.summarization.progressive.get_max_context_tokens"
             ) as mock_max_context:
                 mock_max_context.return_value = 128000
 
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization."
-                    "perform_summary_pass"
+                    "src.shared.llm.summarization.progressive.perform_summary_pass"
                 ) as mock_perform:
 
                     async def mock_pass(*args, **kwargs):
@@ -761,19 +745,17 @@ class TestEdgeCases:
             return result
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.side_effect = mock_count_tokens
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "get_max_context_tokens"
+                "src.shared.llm.summarization.progressive.get_max_context_tokens"
             ) as mock_max_context:
                 mock_max_context.return_value = 128000
 
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization."
-                    "perform_summary_pass"
+                    "src.shared.llm.summarization.progressive.perform_summary_pass"
                 ) as mock_perform:
 
                     async def mock_pass(text, llm, pass_number, target_tokens):
@@ -808,28 +790,25 @@ class TestEdgeCases:
         mock_llm = MagicMock()
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             # Original, in summarize_with_chunking, combined, after chunking
             # loop check, final
             mock_count.side_effect = [70000, 70000, 28000, 28000, 28000, 28000]
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "get_max_context_tokens"
+                "src.shared.llm.summarization.progressive.get_max_context_tokens"
             ) as mock_max_context:
                 mock_max_context.return_value = 128000  # Threshold: 64k
 
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization."
-                    "chunk_text_by_tokens"
+                    "src.shared.llm.summarization.progressive.chunk_text_by_tokens"
                 ) as mock_chunk:
                     # Single chunk
                     mock_chunk.return_value = ["single chunk"]
 
                     with patch(
-                        "src.infrastructure.utils.progressive_summarization."
-                        "summarize_chunk"
+                        "src.shared.llm.summarization.progressive.summarize_chunk"
                     ) as mock_summarize_chunk:
 
                         async def mock_chunk_summary(*args, **kwargs):
@@ -881,18 +860,17 @@ class TestIntegrationScenarios:
             return result
 
         with patch(
-            "src.infrastructure.utils.progressive_summarization.count_tokens"
+            "src.shared.llm.summarization.progressive.count_tokens"
         ) as mock_count:
             mock_count.side_effect = mock_count_tokens
 
             with patch(
-                "src.infrastructure.utils.progressive_summarization."
-                "get_max_context_tokens"
+                "src.shared.llm.summarization.progressive.get_max_context_tokens"
             ) as mock_max_context:
                 mock_max_context.return_value = 128000
 
                 with patch(
-                    "src.infrastructure.utils.progressive_summarization."
+                    "src.shared.llm.summarization.progressive."
                     "summarize_with_chunking"
                 ) as mock_chunk_summarize:
 
@@ -915,7 +893,7 @@ class TestIntegrationScenarios:
                     mock_chunk_summarize.side_effect = mock_chunking
 
                     with patch(
-                        "src.infrastructure.utils.progressive_summarization."
+                        "src.shared.llm.summarization.progressive."
                         "perform_summary_pass"
                     ) as mock_perform:
 

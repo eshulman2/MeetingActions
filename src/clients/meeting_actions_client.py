@@ -15,7 +15,7 @@ import httpx
 from rich.console import Console
 from rich.table import Table
 
-from src.core.base.retry import BackoffStrategy, with_retry
+from src.shared.resilience.retry import BackoffStrategy, with_retry
 
 console = Console()
 

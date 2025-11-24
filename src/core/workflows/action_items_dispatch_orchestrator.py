@@ -6,11 +6,7 @@ It uses the AgentDispatchWorkflow to route and execute action items.
 
 from typing import Any
 
-from llama_index.core.workflow import (
-    StartEvent,
-    Workflow,
-    step,
-)
+from llama_index.core.workflow import StartEvent, Workflow, step
 
 from src.core.schemas.workflow_models import ActionItemsList, AgentExecutionResult
 from src.core.workflows.common_events import StopWithErrorEvent

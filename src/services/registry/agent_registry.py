@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from src.common.singleton_meta import SingletonMeta
 from src.infrastructure.cache import get_cache
 from src.infrastructure.logging.logging_config import get_logger
+from src.shared.common.singleton_meta import SingletonMeta
 
 logger = get_logger("agent_registry")
 

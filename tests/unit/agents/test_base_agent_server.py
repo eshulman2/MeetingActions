@@ -9,8 +9,8 @@ from fastapi.testclient import TestClient
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.memory import Memory
 
-from src.core.base.base_agent_server import BaseAgentServer, ChatQuery
 from src.core.schemas.agent_response import AgentResponse
+from src.shared.base.base_agent_server import BaseAgentServer, ChatQuery
 
 
 class MockAgentServer(BaseAgentServer):
@@ -35,8 +35,8 @@ def mock_llm():
 @pytest.fixture
 def agent_server(mock_llm):
     """Create a test agent server instance."""
-    with patch("src.core.base.base_agent_server.set_up_langfuse"), patch(
-        "src.core.base.base_agent_server.get_langfuse_client"
+    with patch("src.shared.base.base_agent_server.set_up_langfuse"), patch(
+        "src.shared.base.base_agent_server.get_langfuse_client"
     ):
         return MockAgentServer(
             llm=mock_llm, title="Test Agent", description="Test agent for unit testing"
@@ -83,9 +83,9 @@ class TestBaseAgentServer:
         assert response.status_code == 200
         assert response.json() == "Test agent for unit testing"
 
-    @patch("src.core.base.base_agent_server.Context")
-    @patch("src.core.base.base_agent_server.Memory")
-    @patch("src.core.base.base_agent_server.get_langfuse_client")
+    @patch("src.shared.base.base_agent_server.Context")
+    @patch("src.shared.base.base_agent_server.Memory")
+    @patch("src.shared.base.base_agent_server.get_langfuse_client")
     def test_chat_with_agent_success(
         self, mock_langfuse, mock_memory, mock_context, test_client, agent_server
     ):
@@ -129,9 +129,9 @@ class TestBaseAgentServer:
         assert "ctx" in call_args[1]
         assert "memory" in call_args[1]
 
-    @patch("src.core.base.base_agent_server.Context")
-    @patch("src.core.base.base_agent_server.Memory")
-    @patch("src.core.base.base_agent_server.get_langfuse_client")
+    @patch("src.shared.base.base_agent_server.Context")
+    @patch("src.shared.base.base_agent_server.Memory")
+    @patch("src.shared.base.base_agent_server.get_langfuse_client")
     def test_chat_with_agent_structured_response(
         self, mock_langfuse, mock_memory, mock_context, test_client, agent_server
     ):
@@ -168,8 +168,8 @@ class TestBaseAgentServer:
         assert data["response"] == "Structured response content"
         assert data["error"] is False
 
-    @patch("src.core.base.base_agent_server.Memory")
-    @patch("src.core.base.base_agent_server.get_langfuse_client")
+    @patch("src.shared.base.base_agent_server.Memory")
+    @patch("src.shared.base.base_agent_server.get_langfuse_client")
     def test_chat_with_agent_error(
         self, mock_langfuse, mock_memory, test_client, agent_server
     ):

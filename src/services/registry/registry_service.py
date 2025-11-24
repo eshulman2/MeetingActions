@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
-from src.infrastructure.registry.agent_registry import AgentInfo, AgentRegistry
+from src.services.registry.agent_registry import AgentInfo, AgentRegistry
 
 logger = get_logger("registry_service")
 

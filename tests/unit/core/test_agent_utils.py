@@ -6,13 +6,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.core.agents.utils import safe_load_mcp_tools
+from src.shared.agents.utils import safe_load_mcp_tools
 
 
 class TestAgentUtils:
     """Test cases for agent utilities."""
 
-    @patch("src.core.agents.utils.aget_tools_from_mcp_url")
+    @patch("src.shared.agents.utils.aget_tools_from_mcp_url")
     def test_safe_load_mcp_tools_success(self, mock_aget_tools):
         """Test successful loading of MCP tools."""
         # Mock the async function
@@ -32,7 +32,7 @@ class TestAgentUtils:
             # Should return combined tools from both servers
             assert len(result) == 4  # 2 tools from each server
 
-    @patch("src.core.agents.utils.aget_tools_from_mcp_url")
+    @patch("src.shared.agents.utils.aget_tools_from_mcp_url")
     def test_safe_load_mcp_tools_empty_servers(self, mock_aget_tools):
         """Test with empty server list."""
         result = safe_load_mcp_tools([])
@@ -41,8 +41,8 @@ class TestAgentUtils:
         assert not result
         mock_aget_tools.assert_not_called()
 
-    @patch("src.core.agents.utils.aget_tools_from_mcp_url")
-    @patch("src.core.agents.utils.logger")
+    @patch("src.shared.agents.utils.aget_tools_from_mcp_url")
+    @patch("src.shared.agents.utils.logger")
     def test_safe_load_mcp_tools_exception_handling(self, mock_logger, mock_aget_tools):
         """Test exception handling when MCP server fails."""
         # Mock asyncio.run to raise an exception for the first server
@@ -64,8 +64,8 @@ class TestAgentUtils:
             # Should still return tools from working server
             assert len(result) == 1
 
-    @patch("src.core.agents.utils.aget_tools_from_mcp_url")
-    @patch("src.core.agents.utils.logger")
+    @patch("src.shared.agents.utils.aget_tools_from_mcp_url")
+    @patch("src.shared.agents.utils.logger")
     def test_safe_load_mcp_tools_all_servers_fail(self, mock_logger, mock_aget_tools):
         """Test when all servers fail."""
         with patch("asyncio.run") as mock_run:
@@ -80,8 +80,8 @@ class TestAgentUtils:
             # Should return empty list
             assert not result
 
-    @patch("src.core.agents.utils.aget_tools_from_mcp_url")
-    @patch("src.core.agents.utils.logger")
+    @patch("src.shared.agents.utils.aget_tools_from_mcp_url")
+    @patch("src.shared.agents.utils.logger")
     def test_safe_load_mcp_tools_logs_info(self, mock_logger, mock_aget_tools):
         """Test that info logging works correctly."""
         with patch("asyncio.run") as mock_run:
@@ -102,7 +102,7 @@ class TestAgentUtils:
         with pytest.raises((TypeError, AttributeError)):
             safe_load_mcp_tools(None)
 
-    @patch("src.core.agents.utils.aget_tools_from_mcp_url")
+    @patch("src.shared.agents.utils.aget_tools_from_mcp_url")
     def test_safe_load_mcp_tools_preserves_order(self, mock_aget_tools):
         """Test that tools from different servers are combined in order."""
         with patch("asyncio.run") as mock_run:

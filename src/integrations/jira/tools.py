@@ -7,7 +7,7 @@ from jira.resources import Issue
 from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
 from src.infrastructure.logging.logging_config import get_logger
-from src.integrations.jira_tools.jira_formatter import JiraFormatter
+from src.integrations.jira.formatter import JiraFormatter
 
 
 class JiraToolSpec(BaseToolSpec):
@@ -33,9 +33,7 @@ class JiraToolSpec(BaseToolSpec):
         all names will be using lower()"""
         self.logger.debug("Getting field name to ID mapping")
         try:
-            result = {
-                f["name"].lower(): f["id"] for f in self.jira_client.fields()
-            }
+            result = {f["name"].lower(): f["id"] for f in self.jira_client.fields()}
             self.logger.info(f"Retrieved {len(result)} field mappings")
             return result
         except JIRAError as e:
@@ -94,20 +92,14 @@ class JiraToolSpec(BaseToolSpec):
             f"Searching issues with query: {query}, max_results: {max_results}"
         )
         try:
-            result = self.jira_client.search_issues(
-                query, maxResults=max_results
-            )
+            result = self.jira_client.search_issues(query, maxResults=max_results)
             self.logger.info(f"Found {len(result)} issues for query: {query}")
             return result
         except JIRAError as e:
-            self.logger.error(
-                f"Failed to search issues with query '{query}': {e}"
-            )
+            self.logger.error(f"Failed to search issues with query '{query}': {e}")
             raise JIRAError from e
 
-    def create_jira_issue(
-        self, issue_fields: Dict, issue_type: str = "task"
-    ) -> Issue:
+    def create_jira_issue(self, issue_fields: Dict, issue_type: str = "task") -> Issue:
         """
         Create a new Jira issue using the provided field values.
 
@@ -140,15 +132,11 @@ class JiraToolSpec(BaseToolSpec):
             for field, value in issue_fields.items():
                 formatter = getattr(
                     JiraFormatter,
-                    fields_ids_to_types.get(
-                        fields_names_to_id.get(field), "any"
-                    ),
+                    fields_ids_to_types.get(fields_names_to_id.get(field), "any"),
                 )
                 issue[fields_names_to_id.get(field)] = formatter(value)
 
-            issue["issuetype"] = JiraFormatter.issue_type(
-                issue_type.capitalize()
-            )
+            issue["issuetype"] = JiraFormatter.issue_type(issue_type.capitalize())
 
             new_issue = self.jira_client.create_issue(fields=issue)
             self.logger.info(f"Successfully created issue: {new_issue.key}")
@@ -194,8 +182,7 @@ class JiraToolSpec(BaseToolSpec):
             fields_mapping = self.get_fields_id_to_name()
 
             issue_dict = {
-                fields_mapping[k]: v
-                for k, v in issue.raw.get("fields").items()
+                fields_mapping[k]: v for k, v in issue.raw.get("fields").items()
             }
         else:
             if field_filter is None:
@@ -204,8 +191,7 @@ class JiraToolSpec(BaseToolSpec):
             fields_mapping = self.get_fields_name_to_id()
 
             issue_dict = {
-                f: issue.get_field(fields_mapping[f.lower()])
-                for f in field_filter
+                f: issue.get_field(fields_mapping[f.lower()]) for f in field_filter
             }
 
         return issue_dict

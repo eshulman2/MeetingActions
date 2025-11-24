@@ -18,7 +18,7 @@ from src.infrastructure.prompts.prompts import (
     SUMMARIZATION_PROMPT,
     get_progressive_pass_prompt,
 )
-from src.infrastructure.utils.token_utils import (
+from src.shared.llm.token_utils import (
     chunk_text_by_tokens,
     count_tokens,
     get_max_context_tokens,

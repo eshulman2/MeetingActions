@@ -11,8 +11,7 @@ from typing import Any, Dict
 
 import httpx
 
-from src.core.base.circuit_breaker import get_all_circuit_breakers
-from src.core.base.error_handler import (
+from src.core.error_handler import (
     AgentResponseError,
     AgentTimeoutError,
     AgentUnavailableError,
@@ -22,6 +21,7 @@ from src.core.base.error_handler import (
     with_retry,
 )
 from src.infrastructure.logging.logging_config import get_logger
+from src.shared.resilience.circuit_breaker import get_all_circuit_breakers
 
 logger = get_logger("error_handling_example")
 
