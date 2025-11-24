@@ -105,7 +105,7 @@ class TestGoogleToolSpec:
 
         result = google_tool_spec.get_event_gdoc_attachments_ids("event123")
 
-        assert result == "Event has no attachments."
+        assert result == []  # Returns empty list instead of error string
 
     def test_get_event_gdoc_attachments_ids_http_error(self, google_tool_spec):
         """Test error handling for HTTP errors."""
@@ -238,9 +238,11 @@ class TestGoogleToolSpec:
             resp=Mock(status=404), content=b"Not found"
         )
 
-        result = google_tool_spec.get_google_doc_title("doc123")
+        # Now raises HttpError instead of returning error string
+        with pytest.raises(HttpError) as exc_info:
+            google_tool_spec.get_google_doc_title("doc123")
 
-        assert "not found" in result.lower()
+        assert exc_info.value.resp.status == 404
 
     def test_fetch_google_doc_content_from_cache(self, google_tool_spec):
         """Test retrieving document content from cache."""

@@ -49,20 +49,22 @@ class GoogleToolSpec(BaseToolSpec):
 
     def get_event_gdoc_attachments_ids(
         self, event_id: str, calendar_id: str = "primary"
-    ) -> List[str] | str:
+    ) -> List[str]:
         """
         Retrieves an event from Google Calendar and extracts the file IDs of
         all attached Google Docs.
 
         Args:
-            calendar_id (str): The ID of the calendar containing the event.
-                            Usually 'primary' for the user's main calendar.
-            event_id (str): The unique ID of the event.
+            event_id: The unique ID of the event.
+            calendar_id: The ID of the calendar containing the event.
+                        Usually 'primary' for the user's main calendar.
 
         Returns:
-            list: A list of strings, where each string is the file ID of a
-                Google Doc attachment. Returns an empty list if no Google Docs
-                are attached or if the event has no attachments.
+            A list of Google Doc file IDs attached to the event.
+            Returns an empty list if no Google Docs are attached.
+
+        Raises:
+            HttpError: If the Google API request fails.
         """
         logger.info(
             f"Getting Google Doc attachments for event: {event_id} "
@@ -90,10 +92,8 @@ class GoogleToolSpec(BaseToolSpec):
                         if file_id:
                             google_doc_ids.append(file_id)
                             logger.debug(f"Found Google Doc attachment: {file_id}")
-
             else:
                 logger.info("Event has no attachments")
-                return "Event has no attachments."
 
             logger.info(f"Found {len(google_doc_ids)} Google Doc attachments")
             return google_doc_ids
@@ -265,8 +265,19 @@ class GoogleToolSpec(BaseToolSpec):
                 text += self.read_structural_elements(toc.get("content"))
         return text
 
-    def get_google_doc_title(self, document_id: str) -> str | None:
-        """Gets a google doc file title"""
+    def get_google_doc_title(self, document_id: str) -> str:
+        """Gets a google doc file title.
+
+        Args:
+            document_id: The ID of the Google Doc.
+
+        Returns:
+            The title of the document.
+
+        Raises:
+            HttpError: If the Google API request fails.
+            FileNotFoundError: If credentials.json is not found.
+        """
         logger.info(f"Getting title for document: {document_id}")
 
         # Check cache first
@@ -291,25 +302,13 @@ class GoogleToolSpec(BaseToolSpec):
         except HttpError as err:
             logger.error(f"HTTP error occurred: {err}")
             if err.resp.status == 404:
-                error_msg = (
-                    "The requested document was not found."
-                    "Please check the DOCUMENT_ID."
-                )
                 logger.warning(f"Document not found: {document_id}")
-                return error_msg
+            raise
         except FileNotFoundError:
-            error_msg = "Error: `credentials.json` not found."
-            logger.error(error_msg)
-            return error_msg
-        # pylint: disable=broad-exception-caught
-        except Exception as e:
-            error_msg = f"An unexpected error occurred: {e}"
-            logger.error(error_msg)
-            return error_msg
+            logger.error("credentials.json not found")
+            raise
 
-        return None
-
-    def fetch_google_doc_content(self, document_id: str) -> str | None:
+    def fetch_google_doc_content(self, document_id: str) -> str:
         """
         Fetches and returns the text content of a Google Doc.
 
@@ -317,8 +316,11 @@ class GoogleToolSpec(BaseToolSpec):
             document_id: The ID of the Google Doc to fetch.
 
         Returns:
-            A string containing the text content of the document,
-            or None if an error occurs.
+            A string containing the text content of the document.
+
+        Raises:
+            HttpError: If the Google API request fails.
+            FileNotFoundError: If credentials.json is not found.
         """
         logger.info(f"Fetching content for document: {document_id}")
 
@@ -364,12 +366,8 @@ class GoogleToolSpec(BaseToolSpec):
                 logger.warning(
                     f"Document not found: {document_id}. Please check the DOCUMENT_ID."
                 )
-            return None
+            raise
         except FileNotFoundError:
             logger.error("credentials.json not found")
             logger.info("Please follow the setup instructions in the script's comments")
-            return None
-        # pylint: disable=broad-exception-caught
-        except Exception as e:
-            logger.error(f"Unexpected error occurred: {e}")
-            return None
+            raise
