@@ -12,13 +12,7 @@ from uuid import uuid4
 import nest_asyncio
 from langfuse import get_client as get_langfuse_client
 from llama_index.core.program import LLMTextCompletionProgram
-from llama_index.core.workflow import (
-    Context,
-    Event,
-    StartEvent,
-    Workflow,
-    step,
-)
+from llama_index.core.workflow import Context, Event, StartEvent, Workflow, step
 from llama_index.tools.mcp import BasicMCPClient
 from pydantic import BaseModel
 

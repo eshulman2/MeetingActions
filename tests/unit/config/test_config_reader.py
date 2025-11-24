@@ -105,7 +105,7 @@ class TestConfigReader:
 
     def test_reset_instance(self, temp_config_file):
         """Test resetting singleton instance."""
-        from src.common.singleton_meta import SingletonMeta
+        from src.shared.common.singleton_meta import SingletonMeta
 
         # Create first instance
         reader1 = ConfigReader()
@@ -121,7 +121,7 @@ class TestConfigReader:
 
     def test_file_not_found_error(self):
         """Test error when config file doesn't exist."""
-        from src.common.singleton_meta import SingletonMeta
+        from src.shared.common.singleton_meta import SingletonMeta
 
         # Reset singleton before test
         SingletonMeta.reset_instance(ConfigReader)
@@ -135,7 +135,7 @@ class TestConfigReader:
 
     def test_json_decode_error(self, tmp_path):
         """Test error when config file has invalid JSON."""
-        from src.common.singleton_meta import SingletonMeta
+        from src.shared.common.singleton_meta import SingletonMeta
 
         # Reset singleton before test
         SingletonMeta.reset_instance(ConfigReader)
@@ -152,7 +152,7 @@ class TestConfigReader:
 
     def test_validation_error(self, tmp_path):
         """Test error when config file has invalid schema."""
-        from src.common.singleton_meta import SingletonMeta
+        from src.shared.common.singleton_meta import SingletonMeta
 
         # Reset singleton before test
         SingletonMeta.reset_instance(ConfigReader)

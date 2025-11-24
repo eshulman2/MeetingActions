@@ -71,16 +71,20 @@ MeetingActions follows a microservices architecture with specialized agents and 
   - Agent discovery and dynamic dispatch via service registry
   - Human review and approval workflow support
 
-### 4. **Agent Registry Service** (`src/services/registry_service.py`)
+### 4. **Agent Registry Service** (`src/services/registry/`)
 - **Purpose**: Service discovery and health monitoring
 - **Port**: 8003
+- **Components**:
+  - `registry_service.py`: Standalone registry server
+  - `registry_client.py`: Client library for service discovery
+  - `agent_registry.py`: Registry data models and in-memory store
 - **Features**:
   - Agent registration and discovery
   - Health check monitoring
   - Load balancing support
   - Service metadata management
 
-### 5. **Google MCP Server** (`src/mcp/google_tools_mcp.py`)
+### 5. **Google MCP Server** (`src/services/mcp/google_tools_mcp.py`)
 - **Purpose**: Model Context Protocol server for Google tools
 - **Port**: 8100
 - **Features**:
@@ -88,7 +92,7 @@ MeetingActions follows a microservices architecture with specialized agents and 
   - Standardized tool interface
   - Authentication management
 
-### 6. **JIRA MCP Server** (`src/mcp/jira_tools_mcp.py`)
+### 6. **JIRA MCP Server** (`src/services/mcp/jira_tools_mcp.py`)
 - **Purpose**: Model Context Protocol server for JIRA tools
 - **Port**: 8101
 - **Features**:
@@ -229,81 +233,91 @@ python -m src.clients.meeting_actions_client --url http://localhost:8002
 src/
 ├── clients/                # Client applications
 │   └── meeting_actions_client.py # Interactive CLI client
-├── common/                 # Shared utilities and patterns
-│   └── singleton_meta.py  # Singleton metaclass implementation
-├── core/                  # Business logic and agents
-│   ├── agents/           # Individual agent implementations
-│   │   ├── jira_agent.py # Jira integration agent
-│   │   ├── google_agent.py # Google Workspace agent
-│   │   └── utils.py      # Agent utility functions
-│   ├── base/             # Base classes and utilities
-│   │   ├── base_server.py # Base server for all services
-│   │   ├── base_agent_server.py # Base for agent servers
-│   │   └── base_workflow_server.py # Base for workflow servers
-│   ├── schemas/          # Pydantic models and schemas
-│   │   ├── __init__.py   # Centralized schema exports
+├── core/                   # Business logic and domain
+│   ├── agents/            # Individual agent implementations
+│   │   ├── jira_agent.py  # Jira integration agent
+│   │   └── google_agent.py # Google Workspace agent
+│   ├── error_handler.py   # Centralized error handling and resilience
+│   ├── schemas/           # Pydantic models and schemas
+│   │   ├── __init__.py    # Centralized schema exports
 │   │   ├── agent_response.py # Unified AgentResponse model
 │   │   └── workflow_models.py # Workflow data models
-│   ├── workflows/        # Event-driven workflow definitions
+│   ├── workflows/         # Event-driven workflow definitions
 │   │   ├── meeting_notes_and_generation_orchestrator.py
 │   │   ├── action_items_dispatch_orchestrator.py
 │   │   └── sub_workflows/ # Focused sub-workflow components
 │   │       ├── meeting_notes_workflow.py
 │   │       ├── action_items_generation_workflow.py
 │   │       └── agent_dispatch_workflow.py
-│   └── workflow_servers/ # Workflow execution servers
+│   └── workflow_servers/  # Workflow execution servers
 │       └── action_items_server.py # Action items server
-├── infrastructure/       # Platform infrastructure
-│   ├── cache/           # Redis caching with singleton pattern
+├── shared/                 # Shared components and utilities
+│   ├── agents/            # Agent utilities
+│   │   └── utils.py       # Agent utility functions
+│   ├── base/              # Base classes for servers
+│   │   ├── base_server.py # Base server for all services
+│   │   ├── base_agent_server.py # Base for agent servers
+│   │   └── base_workflow_server.py # Base for workflow servers
+│   ├── common/            # Common patterns and utilities
+│   │   └── singleton_meta.py # Singleton metaclass implementation
+│   ├── llm/               # LLM-related utilities
+│   │   ├── summarization/ # Summarization tools
+│   │   │   └── progressive.py # Multi-pass summarization engine
+│   │   └── token_utils.py # Token counting and management
+│   └── resilience/        # Resilience patterns
+│       ├── circuit_breaker.py # Circuit breaker implementation
+│       ├── exceptions.py  # Custom exception hierarchy
+│       └── retry.py       # Retry logic and decorators
+├── infrastructure/         # Platform infrastructure
+│   ├── cache/             # Redis caching with singleton pattern
 │   │   ├── redis_cache.py # Redis cache implementation
 │   │   └── document_cache.py # Document-specific caching
-│   ├── config/          # Configuration management
-│   │   ├── read_config.py # Configuration reader (with progressive_summarization config)
-│   │   └── models.py    # Configuration models
-│   ├── prompts/         # System prompts (organized by category)
-│   │   ├── prompts.py   # Prompt loader and management
-│   │   ├── action_items/    # Action items generation prompts
+│   ├── config/            # Configuration management
+│   │   ├── read_config.py # Configuration reader
+│   │   └── models.py      # Configuration models
+│   ├── prompts/           # System prompts (organized by category)
+│   │   ├── prompts.py     # Prompt loader and management
+│   │   ├── action_items/  # Action items generation prompts
 │   │   │   ├── generation.txt
 │   │   │   ├── refinement.txt
 │   │   │   └── review.txt
-│   │   ├── agents/          # Agent-specific prompts
+│   │   ├── agents/        # Agent-specific prompts
 │   │   │   ├── agent_query.txt
 │   │   │   ├── google_context.txt
 │   │   │   ├── jira_context.txt
 │   │   │   └── tool_dispatcher_prompt.txt
-│   │   ├── summarization/   # Progressive summarization prompts
+│   │   ├── summarization/ # Progressive summarization prompts
 │   │   │   ├── basic.txt
 │   │   │   ├── progressive_pass1.txt
 │   │   │   ├── progressive_pass2.txt
 │   │   │   └── progressive_pass3.txt
-│   │   ├── meeting_notes/   # Meeting notes processing
+│   │   ├── meeting_notes/ # Meeting notes processing
 │   │   │   └── identify_file.txt
-│   │   └── legacy/          # Deprecated prompts (backward compatibility)
+│   │   └── legacy/        # Deprecated prompts (backward compatibility)
 │   │       └── ...
-│   ├── utils/           # Utility functions
-│   │   ├── progressive_summarization.py # Multi-pass summarization engine
-│   │   └── token_utils.py # Token counting and management
-│   ├── logging/         # Structured logging
+│   ├── logging/           # Structured logging
 │   │   └── logging_config.py # Logging configuration
-│   ├── observability/   # Langfuse integration
-│   │   └── observability.py # Monitoring and tracing
-│   └── registry/        # Service registry
-│       ├── agent_registry.py # Agent registration
-│       └── registry_client.py # Registry client
-├── integrations/        # External service integrations
-│   ├── google_tools/    # Google Workspace APIs
-│   │   ├── google_tools.py # Google API tools
-│   │   └── auth_utils.py # Authentication utilities
-│   ├── jira_tools/      # Jira API integration
-│   │   ├── jira_tools.py # Jira API tools
-│   │   └── jira_formatter.py # Jira data formatting
-│   └── general_tools/   # Utility tools
-│       └── date_tools.py # Date/time utilities
-├── mcp/                 # Model Context Protocol servers
-│   ├── google_tools_mcp.py # Google tools MCP server
-│   └── jira_tools_mcp.py # JIRA tools MCP server
-└── services/            # Standalone services
-    └── registry_service.py # Agent registry service
+│   └── observability/     # Langfuse integration
+│       └── observability.py # Monitoring and tracing
+├── integrations/           # External service integrations
+│   ├── common/            # Common integration utilities
+│   │   └── date_tools.py  # Date/time utilities
+│   ├── google/            # Google Workspace APIs
+│   │   ├── auth.py        # Authentication utilities
+│   │   ├── tools.py       # Google API tools
+│   │   └── gmail_tools.py # Gmail-specific tools
+│   ├── jira/              # Jira API integration
+│   │   ├── formatter.py   # Jira data formatting
+│   │   └── tools.py       # Jira API tools
+│   └── general_tools/     # Legacy general tools
+└── services/               # Standalone services
+    ├── mcp/               # Model Context Protocol servers
+    │   ├── google_tools_mcp.py # Google tools MCP server (Port 8100)
+    │   └── jira_tools_mcp.py   # JIRA tools MCP server (Port 8101)
+    └── registry/          # Agent registry service
+        ├── registry_service.py  # Registry server (Port 8003)
+        ├── registry_client.py   # Registry client
+        └── agent_registry.py    # Registry data models
 tests/                   # Test suite
 ├── unit/                # Unit tests
 │   ├── utils/
@@ -330,20 +344,29 @@ docs/                    # Documentation
 - **Factory Pattern**: Dynamic model and configuration creation
 - **Observer Pattern**: Event-driven workflow orchestration
 - **Repository Pattern**: Clean data access abstraction
-- **Separation of Concerns**: Clear boundaries between agents, workflows, and infrastructure
+- **Separation of Concerns**: Clear boundaries between core domain, shared utilities, and infrastructure
+- **Resilience Patterns**: Circuit breakers, retry logic, and error handling in `src/shared/resilience/`
 
 ### Key Architectural Improvements
 
 1. **Unified AgentResponse Schema**: Single, consistent response model for all agents and workflows
-2. **Separated Base Classes**: `BaseAgentServer` for agents, `BaseWorkflowServer` for workflows
+2. **Separated Base Classes**: `BaseAgentServer` for agents, `BaseWorkflowServer` for workflows in `src/shared/base/`
 3. **Centralized Schemas**: All Pydantic models organized in `src/core/schemas/`
 4. **Enhanced Execution Results**: Full action item tracking in dispatch results
 5. **Modular Workflows**: Composable orchestrators for better maintainability
-6. **Progressive Summarization**: Multi-pass reduction system with semantic chunking
+6. **Shared Utilities Layer**: Common components in `src/shared/` for cross-cutting concerns
+   - Agent utilities in `src/shared/agents/`
+   - LLM tools in `src/shared/llm/`
+   - Resilience patterns in `src/shared/resilience/` (circuit breakers, retry, exceptions)
+7. **Progressive Summarization**: Multi-pass reduction system with semantic chunking
    - New workflow step separation: `prepare_meeting_notes` → `generate_action_items`
    - Event-based communication via `NotesReadyEvent`
    - 26 comprehensive unit tests with full coverage
-7. **Organized Prompts Structure**: Category-based prompt organization
+8. **Organized Integrations**: Clean separation by service provider
+   - `src/integrations/google/` for Google Workspace
+   - `src/integrations/jira/` for Jira
+   - `src/integrations/common/` for shared utilities
+9. **Organized Prompts Structure**: Category-based prompt organization
    - `action_items/`, `agents/`, `summarization/`, `meeting_notes/`, `legacy/`
    - Easier prompt management and maintenance
    - Clear separation by feature domain
@@ -705,8 +728,9 @@ open http://localhost:8002/docs
 ### Model Context Protocol (MCP)
 
 **Extensible Tool Framework:**
-- **Google Tools MCP**: Calendar, Docs, Drive, Gmail integration
-- **JIRA Tools MCP**: Issue management, project coordination, ticket operations
+Located in `src/services/mcp/` - standalone MCP server implementations:
+- **Google Tools MCP** (Port 8100): Calendar, Docs, Drive, Gmail integration
+- **JIRA Tools MCP** (Port 8101): Issue management, project coordination, ticket operations
 - **Custom Protocols**: Build domain-specific tool integrations
 - **Agent Enhancement**: Extend capabilities through external tools
 
@@ -762,7 +786,7 @@ print(cache.get_cache_stats())
 
 1. **Create Agent Class**: Extend `BaseAgentServer`
    ```python
-   from src.core.base.base_agent_server import BaseAgentServer
+   from src.shared.base.base_agent_server import BaseAgentServer
    from src.core.schemas.agent_response import AgentResponse
 
    class MyAgent(BaseAgentServer):
@@ -784,7 +808,7 @@ print(cache.get_cache_stats())
 
 1. **Define Workflow Class**: Extend `BaseWorkflowServer`
    ```python
-   from src.core.base.base_workflow_server import BaseWorkflowServer
+   from src.shared.base.base_workflow_server import BaseWorkflowServer
 
    class MyWorkflowServer(BaseWorkflowServer):
        def additional_routes(self):
@@ -819,7 +843,7 @@ from src.core.schemas import (
 Use the progressive summarization engine for handling long documents:
 
 ```python
-from src.infrastructure.utils.progressive_summarization import (
+from src.shared.llm.summarization.progressive import (
     progressive_summarize,
     SummarizationStrategy,
     ProgressiveSummaryResult,

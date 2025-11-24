@@ -40,11 +40,11 @@ help:
 # Start MCP servers
 start-google-mcp:
 	@echo "Starting Google MCP server..."
-	UVICORN_PORT=8100 python -m src.mcp.google_tools_mcp
+	UVICORN_PORT=8100 python -m src.services.mcp.google_tools_mcp
 
 start-jira-mcp:
 	@echo "Starting JIRA MCP server..."
-	UVICORN_PORT=8101 python -m src.mcp.jira_tools_mcp
+	UVICORN_PORT=8101 python -m src.services.mcp.jira_tools_mcp
 
 # Start agent servers
 start-google-agent:
@@ -63,17 +63,17 @@ start-workflow:
 # Start registry service
 start-registry:
 	@echo "Starting agent registry service..."
-	UVICORN_PORT=8003 python -m src.services.registry_service
+	UVICORN_PORT=8003 python -m src.services.registry.registry_service
 
 # Start all servers
 start-all:
 	@echo "Starting all servers..."
 	@echo "Starting agent registry service..."
-	python -m src.services.registry_service &
+	python -m src.services.registry.registry_service &
 	@echo "Starting Google MCP server..."
-	python -m src.mcp.google_tools_mcp &
+	python -m src.services.mcp.google_tools_mcp &
 	@echo "Starting JIRA MCP server..."
-	python -m src.mcp.jira_tools_mcp &
+	python -m src.services.mcp.jira_tools_mcp &
 	@echo "Starting Jira agent..."
 	UVICORN_PORT=8000 python -m src.core.agents.jira_agent &
 	@echo "Starting Google agent..."
@@ -85,12 +85,12 @@ start-all:
 # Stop all servers
 stop-all:
 	@echo "Stopping all servers..."
-	pkill -f "python -m src.services.registry_service" || true
+	pkill -f "python -m src.services.registry.registry_service" || true
 	pkill -f "python -m src.core.agents.jira_agent" || true
 	pkill -f "python -m src.core.agents.google_agent" || true
 	pkill -f "python -m src.core.workflow_servers.action_items_server" || true
-	pkill -f "python -m src.mcp.google_tools_mcp" || true
-	pkill -f "python -m src.mcp.jira_tools_mcp" || true
+	pkill -f "python -m src.services.mcp.google_tools_mcp" || true
+	pkill -f "python -m src.services.mcp.jira_tools_mcp" || true
 	@echo "All servers stopped!"
 
 # Installation and Setup

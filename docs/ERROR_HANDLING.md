@@ -8,12 +8,12 @@ This guide explains the error handling and resilience patterns implemented in Me
 
 ### 1. Custom Exception Hierarchy
 
-Located in: `src/core/base/exceptions.py`
+Located in: `src/shared/resilience/exceptions.py`
 
 All custom exceptions inherit from `MeetingActionsError` and provide structured error information.
 
 ```python
-from src.core.base.exceptions import (
+from src.shared.resilience.exceptions import (
     AgentError,
     AgentTimeoutError,
     WorkflowError,
@@ -58,14 +58,14 @@ MeetingActionsError (base)
 
 ### 2. Retry Decorator
 
-Located in: `src/core/base/retry.py`
+Located in: `src/shared/resilience/retry.py`
 
 Automatically retries failed operations with configurable backoff strategies.
 
 #### Basic Usage
 
 ```python
-from src.core.base.error_handler import with_retry, BackoffStrategy
+from src.core.error_handler import with_retry, BackoffStrategy
 
 @with_retry(
     max_attempts=3,
@@ -112,7 +112,7 @@ async def fetch_data(url: str):
 
 ```python
 import httpx
-from src.core.base.error_handler import with_retry
+from src.core.error_handler import with_retry
 
 @with_retry(
     max_attempts=5,
@@ -143,7 +143,7 @@ async def operation():
 
 ### 3. Circuit Breaker Pattern
 
-Located in: `src/core/base/circuit_breaker.py`
+Located in: `src/shared/resilience/circuit_breaker.py`
 
 Protects your system from cascading failures by "opening" after too many failures.
 
@@ -174,7 +174,7 @@ Protects your system from cascading failures by "opening" after too many failure
 #### Basic Usage
 
 ```python
-from src.core.base.error_handler import with_circuit_breaker
+from src.core.error_handler import with_circuit_breaker
 
 @with_circuit_breaker(
     name="google_api",
@@ -208,7 +208,7 @@ async def call_google_api(endpoint: str):
 #### Manual Circuit Control
 
 ```python
-from src.core.base.error_handler import get_circuit_breaker
+from src.core.error_handler import get_circuit_breaker
 
 # Get circuit breaker
 circuit = get_circuit_breaker("google_api")
@@ -235,7 +235,7 @@ circuit.reset()
 #### Monitoring All Circuits
 
 ```python
-from src.core.base.circuit_breaker import get_all_circuit_breakers
+from src.shared.resilience.circuit_breaker import get_all_circuit_breakers
 
 circuits = get_all_circuit_breakers()
 
@@ -246,14 +246,14 @@ for name, breaker in circuits.items():
 
 ### 4. Error Context Manager
 
-Located in: `src/core/base/error_handler.py`
+Located in: `src/core/error_handler.py`
 
 Automatically enriches errors with contextual information.
 
 #### Usage
 
 ```python
-from src.core.base.error_handler import ErrorContext
+from src.core.error_handler import ErrorContext
 
 async def process_meeting(meeting_id: str, user_id: str):
     """Process meeting with error context."""
@@ -293,7 +293,7 @@ When an error occurs:
 #### Retry + Circuit Breaker
 
 ```python
-from src.core.base.error_handler import (
+from src.core.error_handler import (
     with_retry,
     with_circuit_breaker,
     BackoffStrategy
@@ -446,7 +446,7 @@ async def complex_workflow(meeting_id: str):
 ```python
 # Add health check endpoint
 from fastapi import FastAPI
-from src.core.base.circuit_breaker import get_all_circuit_breakers
+from src.shared.resilience.circuit_breaker import get_all_circuit_breakers
 
 app = FastAPI()
 
@@ -477,8 +477,8 @@ async def circuit_breaker_health():
 ```python
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from src.core.base.error_handler import handle_error_response
-from src.core.base.exceptions import MeetingActionsError
+from src.core.error_handler import handle_error_response
+from src.shared.resilience.exceptions import MeetingActionsError
 
 app = FastAPI()
 
@@ -499,7 +499,7 @@ async def meeting_actions_error_handler(
 
 ```python
 from fastapi import HTTPException
-from src.core.base.error_handler import (
+from src.core.error_handler import (
     with_retry,
     with_circuit_breaker,
     ErrorContext
@@ -529,8 +529,8 @@ async def _generate_with_resilience(meeting_id: str):
 
 ```python
 import pytest
-from src.core.base.error_handler import with_retry
-from src.core.base.exceptions import MaxRetriesExceededError
+from src.core.error_handler import with_retry
+from src.shared.resilience.exceptions import MaxRetriesExceededError
 
 @pytest.mark.asyncio
 async def test_retry_eventually_succeeds():
@@ -570,8 +570,8 @@ async def test_retry_max_attempts_exceeded():
 
 ```python
 import pytest
-from src.core.base.error_handler import with_circuit_breaker
-from src.core.base.exceptions import CircuitOpenError
+from src.core.error_handler import with_circuit_breaker
+from src.shared.resilience.exceptions import CircuitOpenError
 
 @pytest.mark.asyncio
 async def test_circuit_opens_after_failures():
@@ -614,7 +614,7 @@ async def dispatch_to_agent(item: dict, agent_url: str):
 ### After (With Error Handling)
 
 ```python
-from src.core.base.error_handler import (
+from src.core.error_handler import (
     with_retry,
     with_circuit_breaker,
     ErrorContext,

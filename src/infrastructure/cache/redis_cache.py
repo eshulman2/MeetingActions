@@ -5,13 +5,11 @@ from typing import Dict, List, Optional
 
 import redis
 from redis.exceptions import ConnectionError as RedisConnectionError
-from redis.exceptions import (
-    RedisError,
-)
+from redis.exceptions import RedisError
 
-from src.common.singleton_meta import SingletonMeta
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
+from src.shared.common.singleton_meta import SingletonMeta
 
 logger = get_logger("redis_cache")
 

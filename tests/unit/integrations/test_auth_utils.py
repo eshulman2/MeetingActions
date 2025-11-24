@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from src.integrations.google_tools.auth_utils import authenticate
+from src.integrations.google.auth import authenticate
 
 
 class TestAuthenticate:
@@ -12,7 +12,7 @@ class TestAuthenticate:
 
     @patch("os.path.exists")
     @patch("builtins.open", new_callable=mock_open, read_data='{"token": "test"}')
-    @patch("src.integrations.google_tools.auth_utils.Credentials")
+    @patch("src.integrations.google.auth.Credentials")
     def test_authenticate_with_existing_valid_token(
         self, mock_credentials, mock_file, mock_exists
     ):
@@ -50,8 +50,8 @@ class TestAuthenticate:
 
     @patch("os.path.exists")
     @patch("builtins.open", new_callable=mock_open, read_data='{"token": "test"}')
-    @patch("src.integrations.google_tools.auth_utils.Credentials")
-    @patch("src.integrations.google_tools.auth_utils.Request")
+    @patch("src.integrations.google.auth.Credentials")
+    @patch("src.integrations.google.auth.Request")
     def test_authenticate_refreshes_expired_token(
         self, mock_request, mock_credentials, mock_file, mock_exists
     ):

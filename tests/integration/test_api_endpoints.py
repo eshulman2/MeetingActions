@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from src.core.base.base_agent_server import BaseAgentServer
-from src.core.base.base_server import BaseServer
+from src.shared.base.base_agent_server import BaseAgentServer
+from src.shared.base.base_server import BaseServer
 
 
 class MockWorkflowServer(BaseServer):
@@ -45,7 +45,7 @@ def mock_llm():
 @pytest.fixture
 def workflow_server(mock_llm):
     """Create workflow server for testing."""
-    with patch("src.core.base.base_server.get_logger"):
+    with patch("src.shared.base.base_server.get_logger"):
         return MockWorkflowServer(
             llm=mock_llm,
             title="Test Workflow Server",
@@ -56,8 +56,8 @@ def workflow_server(mock_llm):
 @pytest.fixture
 def agent_server(mock_llm):
     """Create agent server for testing."""
-    with patch("src.core.base.base_agent_server.set_up_langfuse"), patch(
-        "src.core.base.base_agent_server.get_langfuse_client"
+    with patch("src.shared.base.base_agent_server.set_up_langfuse"), patch(
+        "src.shared.base.base_agent_server.get_langfuse_client"
     ):
         return MockAgentServerForIntegration(
             llm=mock_llm,
@@ -97,8 +97,8 @@ class TestWorkflowServerIntegration:
 class TestAgentServerIntegration:
     """Integration tests for agent server."""
 
-    @patch("src.core.base.base_agent_server.Memory")
-    @patch("src.core.base.base_agent_server.get_langfuse_client")
+    @patch("src.shared.base.base_agent_server.Memory")
+    @patch("src.shared.base.base_agent_server.get_langfuse_client")
     def test_agent_server_full_flow(self, mock_langfuse, mock_memory, agent_server):
         """Test complete agent server request flow."""
         client = TestClient(agent_server.app)
@@ -153,8 +153,8 @@ class TestAgentServerIntegration:
         """Test error handling across the full request pipeline."""
         client = TestClient(agent_server.app)
 
-        with patch("src.core.base.base_agent_server.Memory"), patch(
-            "src.core.base.base_agent_server.get_langfuse_client"
+        with patch("src.shared.base.base_agent_server.Memory"), patch(
+            "src.shared.base.base_agent_server.get_langfuse_client"
         ):
 
             # Make agent raise an exception

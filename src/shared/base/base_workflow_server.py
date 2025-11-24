@@ -5,8 +5,8 @@ This module contains the BaseWorkflowServer class that extends BaseServer for
 servers that use multiple workflow orchestrators instead of a single agent service.
 """
 
-from src.core.base.base_server import BaseServer
 from src.infrastructure.logging.logging_config import get_logger
+from src.shared.base.base_server import BaseServer
 
 logger = get_logger("workflows.base")
 

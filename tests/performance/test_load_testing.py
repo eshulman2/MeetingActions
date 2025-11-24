@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.integrations.google_tools.google_tools import GoogleToolSpec
+from src.integrations.google.tools import GoogleToolSpec
 
 
 @pytest.mark.performance
@@ -19,9 +19,9 @@ class TestGoogleToolsPerformance:
     @pytest.fixture
     def mock_google_tool_spec(self):
         """Create mock Google tool spec for performance testing."""
-        with patch("src.integrations.google_tools.google_tools.build"), patch(
-            "src.integrations.google_tools.google_tools.authenticate"
-        ), patch("src.integrations.google_tools.google_tools.get_document_cache"):
+        with patch("src.integrations.google.tools.build"), patch(
+            "src.integrations.google.tools.authenticate"
+        ), patch("src.integrations.google.tools.get_document_cache"):
 
             tool_spec = GoogleToolSpec()
 

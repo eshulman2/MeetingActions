@@ -30,4 +30,4 @@ EXPOSE 8003
 ENV PYTHONPATH=/app
 
 # Default command for registry service
-CMD ["uvicorn", "src.services.registry_service:app", "--host", "0.0.0.0"]
+CMD ["uvicorn", "src.services.registry.registry_service:app", "--host", "0.0.0.0"]

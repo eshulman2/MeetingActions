@@ -5,10 +5,10 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from src.core.base.retry import BackoffStrategy, with_retry
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
-from src.infrastructure.registry.agent_registry import AgentInfo
+from src.services.registry.agent_registry import AgentInfo
+from src.shared.resilience.retry import BackoffStrategy, with_retry
 
 logger = get_logger("registry_client")
 

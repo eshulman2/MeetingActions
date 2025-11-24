@@ -30,4 +30,4 @@ EXPOSE 8100
 ENV PYTHONPATH=/app
 
 # Default command for Google MCP server
-CMD ["python", "-m", "src.mcp.google_tools_mcp"]
+CMD ["python", "-m", "src.services.mcp.google_tools_mcp"]

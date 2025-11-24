@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.core.base.base_agent_server import BaseAgentServer, ChatQuery
-from src.core.base.base_server import BaseServer
 from src.core.schemas.agent_response import AgentResponse
+from src.shared.base.base_agent_server import BaseAgentServer, ChatQuery
+from src.shared.base.base_server import BaseServer
 
 
 class MockAgent:
@@ -105,9 +105,9 @@ class TestBaseAgentServerClass:
         assert server.app.title == "Test Agent"
         assert isinstance(server.service, MockAgent)
 
-    @patch("src.core.base.base_agent_server.Context")
-    @patch("src.core.base.base_agent_server.Memory")
-    @patch("src.core.base.base_agent_server.get_langfuse_client")
+    @patch("src.shared.base.base_agent_server.Context")
+    @patch("src.shared.base.base_agent_server.Memory")
+    @patch("src.shared.base.base_agent_server.get_langfuse_client")
     @pytest.mark.asyncio
     async def test_agent_endpoint(
         self, mock_langfuse, mock_memory, mock_context, mock_llm, test_client_factory

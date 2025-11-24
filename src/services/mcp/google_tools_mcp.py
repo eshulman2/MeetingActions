@@ -6,7 +6,8 @@ from starlette.responses import PlainTextResponse
 
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
-from src.integrations.google_tools import GmailToolSpec, GoogleToolSpec
+from src.integrations.google import GoogleToolSpec
+from src.integrations.google_tools import GmailToolSpec
 
 logger = get_logger("mcp.google_tools")
 

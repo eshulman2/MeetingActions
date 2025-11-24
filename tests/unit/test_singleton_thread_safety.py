@@ -2,7 +2,7 @@
 
 import threading
 
-from src.common.singleton_meta import SingletonMeta
+from src.shared.common.singleton_meta import SingletonMeta
 
 
 class TestSingleton(metaclass=SingletonMeta):

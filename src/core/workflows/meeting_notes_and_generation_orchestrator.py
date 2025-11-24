@@ -8,12 +8,7 @@ ActionItemsGenerationWorkflow.
 from typing import Any
 
 from llama_index.core.program import LLMTextCompletionProgram
-from llama_index.core.workflow import (
-    Event,
-    StartEvent,
-    Workflow,
-    step,
-)
+from llama_index.core.workflow import Event, StartEvent, Workflow, step
 
 from src.core.schemas.workflow_models import ActionItemsList, AgentRoutingDecision
 from src.core.workflows.common_events import StopWithErrorEvent
@@ -23,7 +18,7 @@ from src.core.workflows.sub_workflows.action_items_generation_workflow import (
 from src.core.workflows.sub_workflows.meeting_notes_workflow import MeetingNotesWorkflow
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.prompts.prompts import TOOL_DISPATCHER_PROMPT
-from src.infrastructure.registry.registry_client import get_registry_client
+from src.services.registry.registry_client import get_registry_client
 
 logger = get_logger("workflows.meeting_notes_and_generation")
 

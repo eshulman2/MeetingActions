@@ -12,8 +12,8 @@ import time
 from enum import Enum
 from typing import Callable, Optional, Tuple, Type, Union
 
-from src.core.base.exceptions import MaxRetriesExceededError, RetryableError
 from src.infrastructure.logging.logging_config import get_logger
+from src.shared.resilience.exceptions import MaxRetriesExceededError, RetryableError
 
 logger = get_logger("retry")
 

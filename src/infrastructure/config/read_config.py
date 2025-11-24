@@ -13,7 +13,7 @@ from pydantic import (
     model_validator,
 )
 
-from src.common.singleton_meta import SingletonMeta
+from src.shared.common.singleton_meta import SingletonMeta
 
 
 class ObservabilityConfigSchema(BaseModel):

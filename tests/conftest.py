@@ -10,9 +10,9 @@ import fakeredis
 import pytest
 from fastapi.testclient import TestClient
 
-from src.common.singleton_meta import SingletonMeta
 from src.infrastructure.cache import RedisDocumentCache
 from src.infrastructure.config.read_config import ConfigReader, ConfigSchema
+from src.shared.common.singleton_meta import SingletonMeta
 
 
 @pytest.fixture(scope="session", autouse=True)

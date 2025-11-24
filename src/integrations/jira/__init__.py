@@ -1,4 +1,6 @@
-"""Init module for jira tools specs"""
+"""
+Jira integration tools
+"""
 
 from src.integrations.jira.tools import JiraToolSpec
 

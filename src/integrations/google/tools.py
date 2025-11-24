@@ -10,7 +10,7 @@ from llama_index.core.tools.tool_spec.base import BaseToolSpec
 
 from src.infrastructure.cache import get_document_cache
 from src.infrastructure.logging.logging_config import get_logger
-from src.integrations.google_tools.auth_utils import authenticate
+from src.integrations.google.auth import authenticate
 
 logger = get_logger("google_tools.calendar")
 

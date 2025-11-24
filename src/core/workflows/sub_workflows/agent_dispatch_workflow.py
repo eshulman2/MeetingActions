@@ -7,16 +7,10 @@ routing decisions and collecting results.
 from urllib.parse import urljoin
 
 import httpx
-from llama_index.core.workflow import (
-    Context,
-    Event,
-    StartEvent,
-    Workflow,
-    step,
-)
+from llama_index.core.workflow import Context, Event, StartEvent, Workflow, step
 from pydantic import HttpUrl
 
-from src.core.base.error_handler import (
+from src.core.error_handler import (
     AgentResponseError,
     AgentTimeoutError,
     AgentUnavailableError,
@@ -33,7 +27,7 @@ from src.core.schemas.workflow_models import (
 from src.core.workflows.common_events import StopWithErrorEvent
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.prompts.prompts import AGENT_QUERY_PROMPT
-from src.infrastructure.registry.registry_client import get_registry_client
+from src.services.registry.registry_client import get_registry_client
 
 logger = get_logger("workflows.agent_dispatch")
 

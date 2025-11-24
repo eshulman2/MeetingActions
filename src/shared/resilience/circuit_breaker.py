@@ -11,8 +11,8 @@ import time
 from enum import Enum
 from typing import Callable, Optional, Tuple, Type
 
-from src.core.base.exceptions import CircuitOpenError
 from src.infrastructure.logging.logging_config import get_logger
+from src.shared.resilience.exceptions import CircuitOpenError
 
 logger = get_logger("circuit_breaker")
 

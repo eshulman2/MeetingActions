@@ -10,14 +10,15 @@ from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, status
 
-from src.core.base.circuit_breaker import (  # noqa: F401
+from src.infrastructure.logging.logging_config import get_logger
+from src.shared.resilience.circuit_breaker import (  # noqa: F401
     CircuitBreaker,
     CircuitState,
     get_circuit_breaker,
     with_circuit_breaker,
 )
-from src.core.base.exceptions import *  # noqa: F401, F403
-from src.core.base.exceptions import (
+from src.shared.resilience.exceptions import *  # noqa: F401, F403
+from src.shared.resilience.exceptions import (
     AgentAuthenticationError,
     AgentError,
     AgentResponseError,
@@ -43,8 +44,8 @@ from src.core.base.exceptions import (
 )
 
 # Re-export for convenience
-from src.core.base.retry import BackoffStrategy, with_retry  # noqa: F401
-from src.infrastructure.logging.logging_config import get_logger
+from src.shared.resilience.retry import BackoffStrategy  # noqa: F401
+from src.shared.resilience.retry import with_retry
 
 logger = get_logger("error_handler")
 

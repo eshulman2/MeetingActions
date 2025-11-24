@@ -281,7 +281,7 @@ StartEvent → prepare_meeting_notes → NotesReadyEvent → generate_action_ite
 
 ### Utility Functions
 
-Located in `src/infrastructure/utils/progressive_summarization.py`:
+Located in `src/shared/llm/summarization/progressive.py`:
 
 #### Core Functions
 
@@ -309,7 +309,7 @@ Located in `src/infrastructure/utils/progressive_summarization.py`:
 
 **`summarize_chunk()`** - Process individual chunks
 **`summarize_meeting_notes()`** - Simple single-pass summarization
-**`truncate_text_by_tokens()`** - Fallback text truncation (from `token_utils.py`)
+**`truncate_text_by_tokens()`** - Fallback text truncation (from `src/shared/llm/token_utils`)
 
 ---
 
@@ -497,7 +497,7 @@ pytest tests/unit/utils/test_progressive_summarization.py -v
 pytest tests/unit/utils/test_progressive_summarization.py::TestProgressiveSummarize -v
 
 # With coverage
-pytest tests/unit/utils/test_progressive_summarization.py --cov=src/infrastructure/utils/progressive_summarization
+pytest tests/unit/utils/test_progressive_summarization.py --cov=src/shared/llm/summarization/progressive
 ```
 
 ---
@@ -556,7 +556,7 @@ config = get_config()
 print(config.config.progressive_summarization)
 
 # Check token count
-from src.infrastructure.utils.token_utils import count_tokens
+from src.shared.llm.token_utils import count_tokens
 tokens = count_tokens(text, llm)
 print(f"Tokens: {tokens}, Threshold: {threshold}")
 ```

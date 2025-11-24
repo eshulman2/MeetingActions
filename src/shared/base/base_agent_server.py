@@ -20,15 +20,15 @@ from llama_index.core.memory import Memory
 from llama_index.core.workflow import Context
 from pydantic import BaseModel
 
-from src.core.base.base_server import BaseServer
-from src.core.base.error_handler import ErrorContext, handle_error_response
-from src.core.base.exceptions import AgentError, MeetingActionsError
+from src.core.error_handler import ErrorContext, handle_error_response
 from src.core.schemas.agent_response import AgentResponse
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
 from src.infrastructure.observability.observability import set_up_langfuse
-from src.infrastructure.registry.agent_registry import AgentInfo
-from src.infrastructure.registry.registry_client import get_registry_client
+from src.services.registry.agent_registry import AgentInfo
+from src.services.registry.registry_client import get_registry_client
+from src.shared.base.base_server import BaseServer
+from src.shared.resilience.exceptions import AgentError, MeetingActionsError
 
 set_up_langfuse()
 logger = get_logger("agents.base")
@@ -249,7 +249,7 @@ class BaseAgentServer(BaseServer):
             current state, failure counts, and configuration.
             """
             # pylint: disable=import-outside-toplevel
-            from src.core.base.circuit_breaker import get_all_circuit_breakers
+            from src.shared.resilience.circuit_breaker import get_all_circuit_breakers
 
             circuits = get_all_circuit_breakers()
 

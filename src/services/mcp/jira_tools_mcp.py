@@ -8,7 +8,7 @@ from starlette.responses import PlainTextResponse
 
 from src.infrastructure.config import get_config
 from src.infrastructure.logging.logging_config import get_logger
-from src.integrations.jira_tools import JiraToolSpec
+from src.integrations.jira import JiraToolSpec
 
 logger = get_logger("mcp.jira_tools")
 

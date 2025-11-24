@@ -30,4 +30,4 @@ EXPOSE 8101
 ENV PYTHONPATH=/app
 
 # Default command for JIRA MCP server
-CMD ["python", "-m", "src.mcp.jira_tools_mcp"]
+CMD ["python", "-m", "src.services.mcp.jira_tools_mcp"]
