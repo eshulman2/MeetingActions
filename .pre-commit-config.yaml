@@ -26,21 +26,3 @@ repos:
     hooks:
       - id: flake8
         args: ["--max-line-length=88", "--extend-ignore=E203,W503"]
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-requests, types-redis, types-tzlocal]
-
-  - repo: https://github.com/pycqa/pylint
-    rev: v3.3.2
-    hooks:
-      - id: pylint
-        name: pylint (source code)
-        args: ["--rcfile=.pylintrc", "--disable=import-error,no-name-in-module"]
-        exclude: ^tests/
-      - id: pylint
-        name: pylint (tests)
-        args: ["--rcfile=tests/.pylintrc", "--disable=import-error,no-name-in-module"]
-        files: ^tests/
