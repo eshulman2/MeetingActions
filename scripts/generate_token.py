@@ -18,15 +18,18 @@ import os
 import subprocess
 import sys
 
+# Add the project root to the Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+# pylint: disable=wrong-import-position
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 from src.integrations.google_tools.auth_utils import SCOPES
 
-# Add the project root to the Python path
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
+# pylint: enable=wrong-import-position
 
 
 def set_token_ownership(token_path: str) -> None:
