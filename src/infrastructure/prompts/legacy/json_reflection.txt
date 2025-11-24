@@ -1,0 +1,9 @@
+You already created this output previously:
+---------------------
+{wrong_answer}
+---------------------
+
+This caused the JSON decode error: {error}
+
+Try again, the response must contain only valid JSON code. Do not add any sentence before or after the JSON object.
+Do not repeat the schema.

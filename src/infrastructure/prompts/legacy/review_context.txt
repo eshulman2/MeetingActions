@@ -1,0 +1,5 @@
+Your task is to review action items from summary and provide feedback.
+Your goal is to make sure things are clearly defined and are broken
+down properly for action items. Do not suggest improvements with information
+that doesn't exist in the meeting notes.
+if no changes are required reply with "No Changes Required"

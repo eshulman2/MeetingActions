@@ -119,6 +119,11 @@ MeetingActions follows a microservices architecture with specialized agents and 
 - **Multi-LLM Support**: Compatible with OpenAI, Google Gemini, and OpenAI-like endpoints
 - **Unified Response Model**: Consistent `AgentResponse` schema across all agents
 - **Tool Integration**: Extensible tool system for external API integration
+- **Progressive Summarization**: Multi-pass iterative summarization for very long meeting notes
+  - Handles documents of any size with automatic chunking
+  - Configurable strategies (aggressive, balanced, conservative)
+  - Preserves critical information through structured reduction
+  - See [PROGRESSIVE_SUMMARIZATION.md](docs/PROGRESSIVE_SUMMARIZATION.md) for details
 
 ### Enterprise Integrations
 - **Jira Integration**: Full CRUD operations on issues, projects, and workflows
@@ -253,10 +258,31 @@ src/
 │   │   ├── redis_cache.py # Redis cache implementation
 │   │   └── document_cache.py # Document-specific caching
 │   ├── config/          # Configuration management
-│   │   ├── read_config.py # Configuration reader
+│   │   ├── read_config.py # Configuration reader (with progressive_summarization config)
 │   │   └── models.py    # Configuration models
-│   ├── prompts/         # System prompts
-│   │   └── prompts.py   # AI system prompts and contexts
+│   ├── prompts/         # System prompts (organized by category)
+│   │   ├── prompts.py   # Prompt loader and management
+│   │   ├── action_items/    # Action items generation prompts
+│   │   │   ├── generation.txt
+│   │   │   ├── refinement.txt
+│   │   │   └── review.txt
+│   │   ├── agents/          # Agent-specific prompts
+│   │   │   ├── agent_query.txt
+│   │   │   ├── google_context.txt
+│   │   │   ├── jira_context.txt
+│   │   │   └── tool_dispatcher_prompt.txt
+│   │   ├── summarization/   # Progressive summarization prompts
+│   │   │   ├── basic.txt
+│   │   │   ├── progressive_pass1.txt
+│   │   │   ├── progressive_pass2.txt
+│   │   │   └── progressive_pass3.txt
+│   │   ├── meeting_notes/   # Meeting notes processing
+│   │   │   └── identify_file.txt
+│   │   └── legacy/          # Deprecated prompts (backward compatibility)
+│   │       └── ...
+│   ├── utils/           # Utility functions
+│   │   ├── progressive_summarization.py # Multi-pass summarization engine
+│   │   └── token_utils.py # Token counting and management
 │   ├── logging/         # Structured logging
 │   │   └── logging_config.py # Logging configuration
 │   ├── observability/   # Langfuse integration
@@ -278,6 +304,24 @@ src/
 │   └── jira_tools_mcp.py # JIRA tools MCP server
 └── services/            # Standalone services
     └── registry_service.py # Agent registry service
+tests/                   # Test suite
+├── unit/                # Unit tests
+│   ├── utils/
+│   │   └── test_progressive_summarization.py # 26 comprehensive tests
+│   └── ...
+└── integration/         # Integration tests
+    └── ...
+configs/                 # Container-specific configurations
+├── action-items-config.json    # Action items server (includes progressive_summarization)
+├── google-agent-config.json    # Google agent configuration
+├── jira-agent-config.json      # Jira agent configuration
+├── google-mcp-config.json      # Google MCP server configuration
+├── jira-mcp-config.json        # JIRA MCP server configuration
+└── registry-service-config.json # Registry service configuration
+docs/                    # Documentation
+├── ARCHITECTURE.md              # System architecture and design patterns
+├── PROGRESSIVE_SUMMARIZATION.md # Progressive summarization feature guide
+└── ERROR_HANDLING.md           # Error handling patterns
 ```
 
 ### Design Patterns
@@ -295,6 +339,14 @@ src/
 3. **Centralized Schemas**: All Pydantic models organized in `src/core/schemas/`
 4. **Enhanced Execution Results**: Full action item tracking in dispatch results
 5. **Modular Workflows**: Composable orchestrators for better maintainability
+6. **Progressive Summarization**: Multi-pass reduction system with semantic chunking
+   - New workflow step separation: `prepare_meeting_notes` → `generate_action_items`
+   - Event-based communication via `NotesReadyEvent`
+   - 26 comprehensive unit tests with full coverage
+7. **Organized Prompts Structure**: Category-based prompt organization
+   - `action_items/`, `agents/`, `summarization/`, `meeting_notes/`, `legacy/`
+   - Easier prompt management and maintenance
+   - Clear separation by feature domain
 
 ## 🤖 Agent Capabilities
 
@@ -449,10 +501,14 @@ The system uses composable sub-workflows for maximum flexibility:
 - Error handling and retry logic
 
 #### 2. **Action Items Generation Workflow** (`action_items_generation_workflow.py`)
-- Extract structured action items using LLM analysis
-- Multi-stage validation and review cycles
-- Iterative refinement with feedback loops
-- Pydantic model validation
+- **Preparation Step**: Intelligent token management and progressive summarization
+  - Automatic detection of oversized meeting notes
+  - Multi-pass reduction with configurable strategies
+  - Semantic chunking for extremely large documents
+- **Generation Step**: Extract structured action items using LLM analysis
+- **Multi-stage validation**: Review cycles with feedback loops
+- **Iterative refinement**: Continuous improvement based on review
+- **Pydantic model validation**: Type-safe structured output
 
 #### 3. **Agent Dispatch Workflow** (`agent_dispatch_workflow.py`)
 - Intelligent agent discovery via registry
@@ -510,6 +566,14 @@ The system uses composable sub-workflows for maximum flexibility:
     "public_key": "pk-lf-your-public-key",
     "host": "http://localhost:3000"
   },
+  "progressive_summarization": {
+    "threshold_ratio": 0.75,
+    "max_passes": 3,
+    "strategy": "balanced",
+    "chunk_threshold_ratio": 0.5,
+    "chunk_size_ratio": 0.4,
+    "chunk_overlap_tokens": 500
+  },
   "meeting_notes_endpoint": "http://127.0.0.1:8001/meeting-notes",
   "heartbeat_interval": 60,
   "registry_endpoint": "http://localhost:8003"
@@ -522,6 +586,15 @@ The system uses composable sub-workflows for maximum flexibility:
 - **`mcp_config`**: Model Context Protocol server configuration
   - `port`: MCP server port (default: 8100)
   - `servers`: Array of MCP server endpoints
+- **`progressive_summarization`**: Multi-pass summarization (automatically activates for large documents)
+  - `threshold_ratio`: Trigger progressive summarization when tokens > (max_context_tokens × ratio). Value between 0 and 1. (default: 0.75)
+  - `max_passes`: Maximum number of summarization passes (1-5, default: 3)
+  - `strategy`: `"aggressive"`, `"balanced"`, or `"conservative"` (default: `"balanced"`)
+  - `chunk_threshold_ratio`: Trigger automatic chunking when tokens > (context × ratio) (default: 0.5)
+  - `chunk_size_ratio`: Each chunk size as ratio of context window (default: 0.4)
+  - `chunk_overlap_tokens`: Token overlap between chunks (default: 500)
+  - Note: Progressive summarization and chunking always activate when thresholds are exceeded—no enable/disable flag
+  - See [PROGRESSIVE_SUMMARIZATION.md](docs/PROGRESSIVE_SUMMARIZATION.md) for details
 - **`meeting_notes_endpoint`**: Endpoint for meeting notes processing
 - **`heartbeat_interval`**: Service health check interval in seconds
 - **`registry_endpoint`**: Agent registry service endpoint for service discovery
@@ -741,6 +814,37 @@ from src.core.schemas import (
 )
 ```
 
+### Progressive Summarization Utilities
+
+Use the progressive summarization engine for handling long documents:
+
+```python
+from src.infrastructure.utils.progressive_summarization import (
+    progressive_summarize,
+    SummarizationStrategy,
+    ProgressiveSummaryResult,
+)
+
+# Summarize a long document
+result: ProgressiveSummaryResult = await progressive_summarize(
+    text=long_document,
+    llm=your_llm,
+    target_tokens=10000,
+    max_passes=3,
+    strategy=SummarizationStrategy.BALANCED,
+    chunk_threshold_ratio=0.5,
+)
+
+# Access results
+print(f"Reduced from {result.original_tokens} to {result.final_tokens}")
+print(f"Reduction: {result.overall_reduction:.1%}")
+print(f"Passes: {result.total_passes}")
+print(f"Chunked: {result.was_chunked} ({result.num_chunks} chunks)")
+print(f"Summary: {result.final_summary}")
+```
+
+**See [PROGRESSIVE_SUMMARIZATION.md](docs/PROGRESSIVE_SUMMARIZATION.md) for complete API reference and examples.**
+
 ## 📚 API Documentation
 
 ### Interactive Documentation
@@ -854,9 +958,15 @@ curl -f http://localhost:8003/health || echo "Registry down"
 # Test agent discovery
 curl http://localhost:8000/discover
 
-# Run tests
+# Run all tests
 pytest tests/unit/ -v
 pytest tests/integration/ -v
+
+# Run progressive summarization tests specifically
+pytest tests/unit/utils/test_progressive_summarization.py -v
+
+# Run with coverage
+pytest tests/unit/utils/test_progressive_summarization.py --cov=src/infrastructure/utils/progressive_summarization
 ```
 
 ## 📄 License & Contributing
@@ -880,6 +990,12 @@ pytest tests/integration/ -v
 - **Human-in-the-Loop**: Separated generation and dispatch workflows
 - **Enhanced Results**: Full action item tracking in execution results
 - **Interactive CLI**: Rich terminal interface for workflow management
+- **Progressive Summarization**: Multi-pass iterative reduction for long meeting notes
+  - Automatic chunking for documents exceeding context windows
+  - Configurable reduction strategies (aggressive/balanced/conservative)
+  - Workflow refactoring: separated `prepare_meeting_notes` step
+  - Event-based communication with `NotesReadyEvent`
+  - See [PROGRESSIVE_SUMMARIZATION.md](docs/PROGRESSIVE_SUMMARIZATION.md)
 
 ---
 

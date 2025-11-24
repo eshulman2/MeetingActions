@@ -1,4 +1,5 @@
 [flake8]
 per-file-ignores =
     src/infrastructure/prompts/prompts.py: E501
+    scripts/generate_token.py: E402
 max-line-length = 88

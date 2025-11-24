@@ -25,15 +25,31 @@ from src.infrastructure.prompts.prompts import (
     REFINEMENT_PROMPT,
     REVIEWER_PROMPT,
 )
+from src.infrastructure.utils.progressive_summarization import (
+    ProgressiveSummaryResult,
+    SummarizationStrategy,
+    progressive_summarize,
+    summarize_meeting_notes,
+)
 from src.infrastructure.utils.token_utils import (
     count_tokens,
     get_max_context_tokens,
     should_summarize_notes,
-    summarize_meeting_notes,
 )
 
 logger = get_logger("workflows.action_items_generation")
 config = get_config()
+
+
+class NotesReadyEvent(Event):
+    """Event indicating meeting notes are prepared and ready for processing."""
+
+    meeting_notes: str
+    original_notes: str
+    was_summarized: bool
+    progressive_passes: int = 0
+    was_chunked: bool = False
+    num_chunks: int = 0
 
 
 class ReviewRequired(Event):
@@ -87,45 +103,153 @@ class ActionItemsGenerationWorkflow(Workflow):
         )
 
     @step
-    async def generate_action_items(
-        self, ctx: Context, event: StartEvent
-    ) -> ReviewRequired:
-        """Generate initial action items from meeting notes.
+    async def prepare_meeting_notes(self, event: StartEvent) -> NotesReadyEvent:
+        """Prepare meeting notes by summarizing if needed.
 
-        Uses LLMTextCompletionProgram to ensure structured output via Pydantic models.
-        Automatically summarizes long meeting notes to prevent token limit issues.
+        Handles token counting, threshold checking, and applies either progressive
+        or simple summarization based on configuration and content length.
+
+        Args:
+            event: StartEvent containing original meeting notes
+
+        Returns:
+            NotesReadyEvent with prepared notes and metadata
         """
-        logger.info("Generating action items from meeting notes")
+        logger.info("Preparing meeting notes for processing")
 
         try:
-            # Check if meeting notes need summarization
-            meeting_notes = event.meeting_notes
+            original_notes = event.meeting_notes
+            meeting_notes = original_notes
             token_count = count_tokens(meeting_notes, self.llm)
             logger.info(f"Meeting notes token count: {token_count}")
 
-            # Store original notes for potential use in review
-            await ctx.store.set("original_meeting_notes", meeting_notes)
+            # Initialize metadata
+            was_summarized = False
+            progressive_passes = 0
+            was_chunked = False
+            num_chunks = 0
 
-            # Summarize if notes are too long
-            if should_summarize_notes(
+            # Check if we should use progressive summarization for very long notes
+            progressive_config = config.config.progressive_summarization
+            progressive_threshold = int(
+                self.max_context_tokens * progressive_config.threshold_ratio
+            )
+
+            if token_count > progressive_threshold:
+                # Use progressive summarization (includes automatic chunking)
+                # This is always used for very long documents to ensure robust handling
+                logger.info(
+                    f"Notes are very long ({token_count} tokens > "
+                    f"{progressive_threshold} threshold), "
+                    "using progressive summarization"
+                )
+
+                # Get strategy enum from config
+                strategy_map = {
+                    "aggressive": SummarizationStrategy.AGGRESSIVE,
+                    "balanced": SummarizationStrategy.BALANCED,
+                    "conservative": SummarizationStrategy.CONSERVATIVE,
+                }
+                strategy = strategy_map.get(
+                    progressive_config.strategy,
+                    SummarizationStrategy.BALANCED,
+                )
+
+                # Target: 80% of threshold to leave room
+                target_tokens = int(self.token_threshold * 0.8)
+
+                progressive_result: ProgressiveSummaryResult = (
+                    await progressive_summarize(
+                        text=meeting_notes,
+                        llm=self.llm,
+                        target_tokens=target_tokens,
+                        max_passes=progressive_config.max_passes,
+                        strategy=strategy,
+                        chunk_threshold_ratio=(
+                            progressive_config.chunk_threshold_ratio
+                        ),
+                        chunk_size_ratio=progressive_config.chunk_size_ratio,
+                        chunk_overlap_tokens=(progressive_config.chunk_overlap_tokens),
+                    )
+                )
+
+                meeting_notes = progressive_result.final_summary
+                was_summarized = True
+                progressive_passes = progressive_result.total_passes
+                was_chunked = progressive_result.was_chunked
+                num_chunks = progressive_result.num_chunks
+
+                chunked_msg = (
+                    f", chunked into {progressive_result.num_chunks} pieces"
+                    if progressive_result.was_chunked
+                    else ""
+                )
+                logger.info(
+                    f"Progressive summarization complete: "
+                    f"{progressive_result.total_passes} passes, "
+                    f"{token_count} -> {progressive_result.final_tokens} "
+                    f"tokens ({progressive_result.overall_reduction:.1%} "
+                    f"reduction){chunked_msg}"
+                )
+            elif should_summarize_notes(
                 meeting_notes, self.llm, token_threshold=self.token_threshold
             ):
+                # Use simple single-pass summarization for moderately long notes
                 logger.warning(
-                    "Meeting notes exceed token threshold, summarizing to "
-                    "prevent token limit issues"
+                    "Meeting notes exceed token threshold, using "
+                    "single-pass summarization"
                 )
                 meeting_notes = await summarize_meeting_notes(
                     meeting_notes, llm=self.llm, target_length_ratio=0.4
                 )
                 summarized_token_count = count_tokens(meeting_notes, self.llm)
+                was_summarized = True
+
                 logger.info(
                     f"Summarized notes: {token_count} -> "
                     f"{summarized_token_count} tokens "
                     f"({summarized_token_count/token_count*100:.1f}%)"
                 )
-                await ctx.store.set("notes_were_summarized", True)
-            else:
-                await ctx.store.set("notes_were_summarized", False)
+
+            logger.info(
+                f"Notes preparation complete: "
+                f"summarized={was_summarized}, "
+                f"passes={progressive_passes}, "
+                f"chunked={was_chunked}"
+            )
+
+            return NotesReadyEvent(
+                meeting_notes=meeting_notes,
+                original_notes=original_notes,
+                was_summarized=was_summarized,
+                progressive_passes=progressive_passes,
+                was_chunked=was_chunked,
+                num_chunks=num_chunks,
+            )
+
+        except Exception as e:
+            logger.error(f"Error preparing meeting notes: {e}")
+            raise
+
+    @step
+    async def generate_action_items(
+        self, ctx: Context, event: NotesReadyEvent
+    ) -> ReviewRequired:
+        """Generate action items from prepared meeting notes.
+
+        Uses LLMTextCompletionProgram to ensure structured output via Pydantic models.
+
+        Args:
+            ctx: Workflow context
+            event: NotesReadyEvent with prepared (potentially summarized) notes
+
+        Returns:
+            ReviewRequired event with generated action items
+        """
+        logger.info("Generating action items from prepared meeting notes")
+
+        try:
+            meeting_notes = event.meeting_notes
 
             # Get current date and time for context
             current_datetime = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")

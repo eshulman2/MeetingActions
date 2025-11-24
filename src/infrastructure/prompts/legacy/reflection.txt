@@ -1,0 +1,7 @@
+You already created this output previously:
+{action_items}
+
+Please use the following review to improve the way they are written:
+{review}
+
+Reply only with the new action items text.

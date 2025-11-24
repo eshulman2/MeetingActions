@@ -10,6 +10,14 @@
         "public_key": "pk-lf-82907698-aa41-41fb-b9a3-e9e37c06a41a",
         "host": "http://host.docker.internal:3000"
     },
+    "progressive_summarization": {
+        "threshold_ratio": 0.75,
+        "max_passes": 3,
+        "strategy": "balanced",
+        "chunk_threshold_ratio": 0.5,
+        "chunk_size_ratio": 0.4,
+        "chunk_overlap_tokens": 500
+    },
     "google_mcp": "http://google-mcp:8100/mcp",
     "registry_endpoint": "http://registry-service:8000"
 }

@@ -63,6 +63,56 @@ class CacheConfigSchema(BaseModel):
         return self
 
 
+class ProgressiveSummarizationConfig(BaseModel):
+    """Configuration for progressive summarization.
+
+    Progressive summarization automatically activates when documents exceed
+    the threshold_ratio to ensure robust handling of large documents.
+    """
+
+    threshold_ratio: float = Field(
+        default=0.75,
+        gt=0,
+        le=1.0,
+        description="Use progressive when notes exceed max_context_tokens * this ratio",
+    )
+    max_passes: int = Field(
+        default=3, gt=0, le=5, description="Maximum summarization passes"
+    )
+    strategy: str = Field(
+        default="balanced",
+        description="Strategy: aggressive, balanced, or conservative",
+    )
+    chunk_threshold_ratio: float = Field(
+        default=0.5,
+        gt=0,
+        le=1.0,
+        description="Chunk if document exceeds this ratio of LLM context window",
+    )
+    chunk_size_ratio: float = Field(
+        default=0.4,
+        gt=0,
+        le=0.8,
+        description="Each chunk size as ratio of LLM context window",
+    )
+    chunk_overlap_tokens: int = Field(
+        default=500,
+        ge=0,
+        description="Token overlap between consecutive chunks",
+    )
+
+    @model_validator(mode="after")
+    def validate_strategy(self) -> "ProgressiveSummarizationConfig":
+        """Validate strategy value."""
+        valid_strategies = ["aggressive", "balanced", "conservative"]
+        if self.strategy not in valid_strategies:
+            raise ValueError(
+                f"Invalid strategy: {self.strategy}. "
+                f"Must be one of: {', '.join(valid_strategies)}"
+            )
+        return self
+
+
 class ConfigSchema(BaseModel):
     """Config Schema for validation"""
 
@@ -98,6 +148,10 @@ class ConfigSchema(BaseModel):
         default_factory=ObservabilityConfigSchema
     )
     cache_config: CacheConfigSchema = Field(default_factory=CacheConfigSchema)
+    progressive_summarization: ProgressiveSummarizationConfig = Field(
+        default_factory=ProgressiveSummarizationConfig,
+        description="Progressive summarization configuration",
+    )
     google_mcp: HttpUrl = Field(
         default_factory=lambda: HttpUrl("http://127.0.0.1:8100/mcp")
     )

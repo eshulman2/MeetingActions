@@ -1,0 +1,9 @@
+Based on the review feedback below, please refine the action items while maintaining the same JSON structure.
+
+CURRENT ACTION ITEMS:
+{action_items}
+
+REVIEW FEEDBACK:
+{review}
+
+Please return the improved action items in the exact same JSON format as the original.
